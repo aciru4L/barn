@@ -14,6 +14,9 @@ All notable changes to Barn are recorded here. The format follows
   versions are an error.
 - A local repository with immutable releases and timestamped snapshots.
 - Prebuilt executables for Linux, macOS and Windows on each GitHub release.
+- `barn build` and `barn run`, which stop when `barn.lock` does not match `barn.pkg` or
+  `.barn/` does not match `barn.lock`, and otherwise hand the project to `goose build` or
+  `goose run`.
 
 ### Fixed
 

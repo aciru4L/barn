@@ -17,6 +17,7 @@ A package manager for [Goose](https://github.com/aardappel/goose). Packages are
 | ✅ | Errors on incompatible versions, so there are no silent conflicts |
 | ✅ | `barn.lock` with a SHA-256 fingerprint for each egg |
 | ✅ | `barn verify` checks `.barn/` against the lock and catches edited eggs |
+| ✅ | `barn build` and `barn run` refuse a stale lock or edited eggs before handing off to Goose |
 | ✅ | Overrides: pin an egg's version, or point it at a local folder |
 | ✅ | Local repository with immutable releases and timestamped snapshots |
 | ✅ | Dependency tree and flat listing with `barn inspect` and `barn resolve` |
@@ -51,7 +52,7 @@ barn hatch app                   # a project that uses it
 cd app
 barn add acme/numbers            # depend on the newest release, and install it
 barn inspect
-goose main.goose
+barn run
 ```
 
 A project describes itself and its dependencies in `barn.pkg`:
@@ -76,9 +77,16 @@ dependencies = [
 | `barn remove <egg>...` | remove dependencies |
 | `barn upgrade [egg]...` | upgrade dependencies to their newest compatible releases |
 | `barn verify` | check `.barn/` against `barn.lock` |
+| `barn build [-- options...]` | check the eggs, then `goose build` the project |
+| `barn run [-- arguments...]` | check the eggs, then `goose run` the project |
 | `barn lay` | put the egg into the repository |
 | `barn inspect` | show the dependency tree |
 | `barn resolve` | list the eggs the project uses |
+
+`barn build` and `barn run` first check that `barn.lock` matches `barn.pkg` and that
+`.barn/` matches `barn.lock`, then hand the project's main file to `goose` on `PATH`.
+After `--`, `build` passes options to `goose build` and `run` passes arguments to the
+program. Running `goose` directly skips these checks.
 
 `barn help <command>` shows a command's options.
 
