@@ -84,3 +84,7 @@ Barn is licensed under the [Apache License 2.0](LICENSE).
 An executable built from Barn includes the Goose runtime and standard library, which
 are licensed under the Apache License 2.0. Distributing such an executable requires
 including Goose's license with it.
+
+## Disclaimer
+
+Barn is a hobby project and almost entirely developed with AI.
