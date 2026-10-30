@@ -164,10 +164,12 @@ fn run(command: const u8[:], argv: u8[:][:]) -> u8[>..] {
             i++;
         } else {
             guard !starts_with(a, "-") else { fail_usage(str("unknown option '", a, "' for ", command)); }
-            arguments.push(if is_edit_command(command) { lowercased_spec(a, lowered) } else { a });
+            arguments.push(if is_edit_command(command) { lowercase_spec_owner(a, lowered) } else { a });
         }
     }
-    guard command != "hatch" else { return run_hatch(arguments, lowercased("owner", owner, owner.len, lowered), flags); }
+    guard command != "hatch" else {
+        return run_hatch(arguments, lowercase_owner(owner, owner.len, lowered), flags);
+    }
     check_argument_count(command, arguments.len);
     if repository.len == 0 && !default_repository(repository) {
         fail_usage("no repository: --repo DIR, BARN_REPO or BARN_HOME");
