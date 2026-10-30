@@ -1,0 +1,43 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  GOOSE_VERSION: v2026.3
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x64
+            archive: tar.gz
+          - os: windows-latest
+            platform: windows-x64
+            archive: zip
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Goose
+        run: |
+          name="goose-$GOOSE_VERSION-${{ matrix.platform }}"
+          curl -fsSL -o "$RUNNER_TEMP/goose.${{ matrix.archive }}" \
+            "https://github.com/aardappel/goose/releases/download/$GOOSE_VERSION/$name.${{ matrix.archive }}"
+          cd "$RUNNER_TEMP"
+          if [ "${{ matrix.archive }}" = zip ]; then unzip -q goose.zip; else tar xzf goose.tar.gz; fi
+          echo "$RUNNER_TEMP/$name" >> "$GITHUB_PATH"
+
+      - name: Test
+        run: bash test/run.sh
