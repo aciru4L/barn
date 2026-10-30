@@ -21,6 +21,7 @@ trap 'rm -rf "$work"' EXIT
 work_native="$work"
 command -v cygpath > /dev/null && work_native="$(cygpath -m "$work")"
 fixtures="$root/test/repository"
+version="$(sed -n 's/^let VERSION = "\(.*\)";$/\1/p' "$root/barn.goose")"
 
 barn() { "$executable" "$@"; }
 
@@ -207,7 +208,8 @@ scenario() {
 }
 
 normalize() {
-    sed -e "s|$work_native|<work>|g" -e "s|$root_native|<root>|g" -e "s|$root|<root>|g" -e "s|$work|<work>|g" -e 's/[0-9]\{8\}T[0-9]\{6\}Z/<stamp>/g'
+    sed -e "s|$work_native|<work>|g" -e "s|$root_native|<root>|g" -e "s|$root|<root>|g" -e "s|$work|<work>|g" -e 's/[0-9]\{8\}T[0-9]\{6\}Z/<stamp>/g' \
+        -e "s/^barn $version\$/barn <version>/"
 }
 
 actual="$(scenario | normalize)"
