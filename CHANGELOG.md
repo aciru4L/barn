@@ -13,3 +13,4 @@ All notable changes to Barn are recorded here. The format follows
 - Minimal version selection: each egg gets the newest version asked for, and incompatible
   versions are an error.
 - A local repository with immutable releases and timestamped snapshots.
+- Prebuilt executables for Linux, macOS and Windows on each GitHub release.

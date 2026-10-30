@@ -38,3 +38,23 @@ Barn follows the Unix rules of clarity, silence and repair from Eric S. Raymond'
 
 Barn is versioned with [SemVer](https://semver.org), and changes are recorded in
 `CHANGELOG.md` as [Keep a Changelog](https://keepachangelog.com) describes.
+
+## Releases
+
+A release is a tag `vX.Y.Z` on `main`. Pushing it runs `.github/workflows/release.yml`,
+which tests barn, builds it for Linux, macOS and Windows, and publishes a GitHub release
+with the archives, their `SHA256SUMS` and the version's changelog section as notes.
+
+1. Set `VERSION` in `barn.goose` to the new version.
+2. Rename `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD` and open a new
+   empty `## [Unreleased]` above it.
+3. Merge both changes as `chore: release X.Y.Z`, then tag and push from `main`:
+
+   ```sh
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+
+The workflow stops without publishing when the tag differs from `VERSION` or the
+changelog has no section for the version. Each archive carries Goose's license as
+`LICENSE-GOOSE`, because the executable includes the Goose runtime.
