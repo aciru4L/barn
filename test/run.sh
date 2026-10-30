@@ -35,6 +35,22 @@ run() {
     return 0
 }
 
+without_goose_progress() {
+    printf '$ %s\n' "$*"
+    "$@" 2> /dev/null
+    local status=$?
+    [ "$status" -ne 0 ] && printf '[exit %d]\n' "$status"
+    return 0
+}
+
+silently() {
+    printf '$ %s\n' "$*"
+    "$@" > /dev/null 2>&1
+    local status=$?
+    [ "$status" -ne 0 ] && printf '[exit %d]\n' "$status"
+    return 0
+}
+
 show() {
     for file in "$@"; do
         printf -- '--- %s\n' "$file"
@@ -87,15 +103,32 @@ scenario() {
     run barn add nothing
     run barn add acme/numbers:0.2.0
 
-    section "run"
+    section "build and run"
     sed -i 's/print(app::honk());/print(numbers::honk());/' main.goose
-    printf '$ goose main.goose\n'
-    goose main.goose 2> /dev/null
+    without_goose_progress barn run
+    silently barn build -- -o "$work/app-executable"
+    run "$work/app-executable"
+    sed -i 's/numbers:0.2.0/numbers:0.1.1/' barn.pkg
+    run barn run
+    run barn build
+    sed -i 's/numbers:0.1.1/numbers:0.2.0/' barn.pkg
+    run barn run --bogus
+    mkdir ../arguments
+    enter ../arguments
+    printf 'import os;\nfn main() {\n    for a in args()[1..] { print(a); }\n    exit(3);\n}\n' > main.goose
+    write_pkg ''
+    without_goose_progress barn run -- one "two words" -- --repo
+    without_goose_progress barn run . --repo "$BARN_REPO"
+    write_pkg $'dependencies = ["acme/numbers:0.2.0"];\n'
+    run barn run
+    enter ../app
 
     section "verify and edited copies"
     run barn verify
     printf '// edited\n' >> .barn/numbers/numbers.goose
     run barn verify
+    run barn run
+    run barn build
     run barn install
     run barn install --force
     run barn verify
@@ -155,6 +188,7 @@ scenario() {
     run barn inspect
     show main.goose barn.lock
     run barn verify
+    without_goose_progress barn run
     enter ..
 
     section "uppercase"
@@ -227,6 +261,7 @@ scenario() {
     run barn add
     run barn install a b
     run barn help lay
+    run barn help run
     run barn help frob
     run barn version
 }

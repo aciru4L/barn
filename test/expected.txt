@@ -106,9 +106,42 @@ installed 1 egg
   acme/numbers:0.2.0
 acme/numbers: 0.2.0_snapshot -> 0.2.0
 
-## run
-$ goose main.goose
+## build and run
+$ barn run
 honk from numbers
+$ barn build -- -o <work>/app-executable
+$ <work>/app-executable
+honk from numbers
+$ barn run
+barn: barn.lock does not match barn.pkg:
+  acme/numbers:0.1.1 is not in barn.lock
+  acme/numbers:0.2.0 is no longer used
+barn install updates it
+[exit 1]
+$ barn build
+barn: barn.lock does not match barn.pkg:
+  acme/numbers:0.1.1 is not in barn.lock
+  acme/numbers:0.2.0 is no longer used
+barn install updates it
+[exit 1]
+$ barn run --bogus
+barn: unknown option '--bogus' for run
+Run 'barn help' for usage.
+[exit 2]
+$ cd ../arguments
+$ barn run -- one two words -- --repo
+one
+two words
+--
+--repo
+[exit 3]
+$ barn run . --repo <work>/repo
+[exit 3]
+$ barn run
+barn: no barn.lock in .
+barn install writes it
+[exit 1]
+$ cd ../app
 
 ## verify and edited copies
 $ barn verify
@@ -117,6 +150,18 @@ $ barn verify
 barn: .barn/ differs from barn.lock:
   .barn/numbers was edited:
     .barn/numbers/numbers.goose was edited
+[exit 1]
+$ barn run
+barn: .barn/ differs from barn.lock:
+  .barn/numbers was edited:
+    .barn/numbers/numbers.goose was edited
+barn install --force restores it
+[exit 1]
+$ barn build
+barn: .barn/ differs from barn.lock:
+  .barn/numbers was edited:
+    .barn/numbers/numbers.goose was edited
+barn install --force restores it
 [exit 1]
 $ barn install
 barn: nothing was changed:
@@ -289,6 +334,7 @@ locked = [
 ];
 $ barn verify
 verified 0 eggs
+$ barn run
 $ cd ..
 
 ## uppercase
@@ -446,6 +492,8 @@ commands:
   remove <egg>...   remove dependencies
   upgrade [egg]...  upgrade dependencies to their newest compatible releases
   verify [dir]      check .barn/ against barn.lock
+  build [dir]       check the eggs, then build the project with goose
+  run [dir]         check the eggs, then run the project with goose
   lay [dir]         put the egg into the repository
   inspect [dir]     show the dependency tree
   resolve [dir]     list the eggs the project uses
@@ -459,6 +507,7 @@ options:
   -y, --yes         hatch: do not ask
   --force           install, add, remove, upgrade: replace edited or changed eggs
   --release         lay: a release instead of a snapshot
+  -- ...            build: goose's options; run: the program's arguments
   -h, --help        help for the command
 [exit 2]
 $ barn frob
@@ -486,6 +535,11 @@ usage: barn lay [dir] [--release] [--repo DIR]
 
 Puts the egg into the repository: a new snapshot, or with
 --release the release.
+$ barn help run
+usage: barn run [dir] [--repo DIR] [-- program arguments...]
+
+Checks that barn.lock matches barn.pkg and .barn/ matches barn.lock,
+then runs the project's main file with goose run.
 $ barn help frob
 barn: unknown command 'frob'
 Run 'barn help' for usage.
