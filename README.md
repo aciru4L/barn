@@ -3,8 +3,30 @@
 A package manager for [Goose](https://github.com/aardappel/goose). Packages are
 **eggs**, named `owner/name` and released at semantic versions.
 
-> **Work in progress.** The `barn.pkg` format and the repository layout may still
-> change before the first release.
+> [!WARNING]
+> **Work in progress.**
+
+## Features
+
+| | Feature |
+|:-:|---|
+| ✅ | Create projects with `barn hatch` |
+| ✅ | Add, remove and upgrade dependencies |
+| ✅ | Install eggs into `.barn/` and update the imports in `main.goose` automatically |
+| ✅ | Minimal version selection |
+| ✅ | Errors on incompatible versions, so there are no silent conflicts |
+| ✅ | `barn.lock` with a SHA-256 fingerprint for each egg |
+| ✅ | `barn verify` checks `.barn/` against the lock and catches edited eggs |
+| ✅ | Overrides: pin an egg's version, or point it at a local folder |
+| ✅ | Local repository with immutable releases and timestamped snapshots |
+| ✅ | Dependency tree and flat listing with `barn inspect` and `barn resolve` |
+| ✅ | Prebuilt executables for Linux, macOS and Windows |
+| ❌ | Remote / hosted registry |
+| ❌ | Publishing and sharing eggs with others |
+| ❌ | Dependencies fetched straight from Git or a URL |
+| ❌ | Searching and browsing available eggs |
+| ❌ | Signed releases and yanking bad versions |
+| ❌ | A stable `barn.pkg` format |
 
 ## Build
 
