@@ -27,33 +27,36 @@ fn valid_egg(egg: const u8[:]) -> bool {
 
 fn short_name(egg: const u8[:]) -> const u8[:] { egg[find(egg, "/") + 1..] }
 
-var case_warnings: u8[>..] = [];
+var warned_owner_text: u8[>..] = [];
+var warned_owners: (const u8[:])[>..] = [];
 
 fn has_upper(s: const u8[:]) -> bool {
     for c in s { if c >= 'A' && c <= 'Z' { return true; } }
     return false;
 }
 
-// s with its first count bytes lowercased, copied into out when that changes it; warns once per spelling.
-fn lowercased(what: const u8[:], s: const u8[:], count: i64, out: u8[>..]&) -> const u8[:] {
-    guard has_upper(s[..count]) else { return s; }
+fn warn_once_about_owner(given: const u8[:], lowered: const u8[:]) {
+    guard !contains(warned_owners[..], given) else { return; }
+    let start = warned_owner_text.len;
+    warned_owner_text.append(given);
+    warned_owners.push(warned_owner_text[start..]);
+    write_stderr(str("warning: owner '", given, "' is not lowercase: using '", lowered, "'\n"));
+}
+
+fn lowercase_owner(s: const u8[:], owner_length: i64, out: u8[>..]&) -> const u8[:] {
+    guard has_upper(s[..owner_length]) else { return s; }
     let start = out.len;
     out.append(s);
-    to_lower(out[start..start + count]);
+    to_lower(out[start..start + owner_length]);
     let lowered = out[start..];
-    let warning = str("warning: ", what, " '", s[..count], "' is not lowercase: using '", lowered[..count], "'\n");
-    if find(case_warnings, warning) < 0 {
-        case_warnings.append(warning);
-        write_stderr(warning);
-    }
+    warn_once_about_owner(s[..owner_length], lowered[..owner_length]);
     return lowered;
 }
 
-// The owner of an owner/name spec lowercased; the name is left to fail validation.
-fn lowercased_spec(spec: const u8[:], out: u8[>..]&) -> const u8[:] {
+fn lowercase_spec_owner(spec: const u8[:], out: u8[>..]&) -> const u8[:] {
     let slash = find(spec, "/");
     guard slash >= 0 else { return spec; }
-    return lowercased("owner", spec, slash, out);
+    return lowercase_owner(spec, slash, out);
 }
 
 fn name_suggestion(name: const u8[:]) -> u8[>..] {
@@ -160,7 +163,7 @@ fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: O
     fn egg_name(s: const u8[:]) -> const u8[:] {
         let slash = find(s, "/");
         guard slash >= 0 else { fail(str("bad egg '", s, "': expected owner/name")); }
-        let egg = lowercased("owner", s, slash, names);
+        let egg = lowercase_owner(s, slash, names);
         guard valid_owner(egg[..slash]) else { fail(str("bad owner in '", s, "': use ", OWNER_RULE)); }
         let name = s[slash + 1..];
         guard valid_name(name) else { fail(str("bad name in '", s, "': use ", NAME_RULE, name_hint(name))); }
@@ -274,7 +277,7 @@ fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: O
     guard name_span[0] >= 0 else { return Manifest {..}, str("missing name = \"...\";"); }
     guard version_span[0] >= 0 else { return Manifest {..}, str("missing version = \"x.y.z\";"); }
     let given_owner = src[owner_span[0]..owner_span[1]];
-    let owner = lowercased("owner", given_owner, given_owner.len, names);
+    let owner = lowercase_owner(given_owner, given_owner.len, names);
     let start = names.len;
     format(names, owner, "/", src[name_span[0]..name_span[1]]);
     m.egg.name = names[start..];
