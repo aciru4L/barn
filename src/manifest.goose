@@ -27,6 +27,47 @@ fn valid_egg(egg: const u8[:]) -> bool {
 
 fn short_name(egg: const u8[:]) -> const u8[:] { egg[find(egg, "/") + 1..] }
 
+var case_warnings: u8[>..] = [];
+
+fn has_upper(s: const u8[:]) -> bool {
+    for c in s { if c >= 'A' && c <= 'Z' { return true; } }
+    return false;
+}
+
+// s with its first count bytes lowercased, copied into out when that changes it; warns once per spelling.
+fn lowercased(what: const u8[:], s: const u8[:], count: i64, out: u8[>..]&) -> const u8[:] {
+    guard has_upper(s[..count]) else { return s; }
+    let start = out.len;
+    out.append(s);
+    to_lower(out[start..start + count]);
+    let lowered = out[start..];
+    let warning = str("warning: ", what, " '", s[..count], "' is not lowercase: using '", lowered[..count], "'\n");
+    if find(case_warnings, warning) < 0 {
+        case_warnings.append(warning);
+        write_stderr(warning);
+    }
+    return lowered;
+}
+
+// The owner of an owner/name spec lowercased; the name is left to fail validation.
+fn lowercased_spec(spec: const u8[:], out: u8[>..]&) -> const u8[:] {
+    let slash = find(spec, "/");
+    guard slash >= 0 else { return spec; }
+    return lowercased("owner", spec, slash, out);
+}
+
+fn name_suggestion(name: const u8[:]) -> u8[>..] {
+    var suggestion: u8[>..] = [];
+    for c in name { suggestion.push(if c == '-' { '_' } else if c >= 'A' && c <= 'Z' { c + 32 } else { c }); }
+    return suggestion;
+}
+
+fn name_hint(name: const u8[:]) -> u8[>..] {
+    let suggestion = name_suggestion(name);
+    guard valid_name(suggestion) else { return str(""); }
+    return str("; say '", suggestion, "'");
+}
+
 fn is_relative_path(path: const u8[:]) -> bool {
     path.len > 0 && path[0] != '/' && find(path, "\\") < 0 && find(path, ":") < 0 && find(path, "\"") < 0
 }
@@ -119,9 +160,11 @@ fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: O
     fn egg_name(s: const u8[:]) -> const u8[:] {
         let slash = find(s, "/");
         guard slash >= 0 else { fail(str("bad egg '", s, "': expected owner/name")); }
-        guard valid_owner(s[..slash]) else { fail(str("bad owner in '", s, "': use ", OWNER_RULE)); }
-        guard valid_name(s[slash + 1..]) else { fail(str("bad name in '", s, "': use ", NAME_RULE)); }
-        return s;
+        let egg = lowercased("owner", s, slash, names);
+        guard valid_owner(egg[..slash]) else { fail(str("bad owner in '", s, "': use ", OWNER_RULE)); }
+        let name = s[slash + 1..];
+        guard valid_name(name) else { fail(str("bad name in '", s, "': use ", NAME_RULE, name_hint(name))); }
+        return egg;
     }
 
     fn dependency(s: const u8[:]) -> Dependency {
@@ -193,7 +236,9 @@ fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: O
     fn take_value(k: const u8[:]) {
         if k == "owner" {
             take_once(k, owner_span);
-            guard valid_owner(src[owner_span[0]..owner_span[1]]) else { fail(str("bad owner: use ", OWNER_RULE)); }
+            var owner = str(src[owner_span[0]..owner_span[1]]);
+            to_lower(owner);
+            guard valid_owner(owner) else { fail(str("bad owner: use ", OWNER_RULE)); }
         } else if k == "name" {
             take_once(k, name_span);
             guard valid_name(src[name_span[0]..name_span[1]]) else { fail(str("bad name: use ", NAME_RULE)); }
@@ -228,8 +273,10 @@ fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: O
     guard owner_span[0] >= 0 else { return Manifest {..}, str("missing owner = \"...\";"); }
     guard name_span[0] >= 0 else { return Manifest {..}, str("missing name = \"...\";"); }
     guard version_span[0] >= 0 else { return Manifest {..}, str("missing version = \"x.y.z\";"); }
+    let given_owner = src[owner_span[0]..owner_span[1]];
+    let owner = lowercased("owner", given_owner, given_owner.len, names);
     let start = names.len;
-    format(names, src[owner_span[0]..owner_span[1]], "/", src[name_span[0]..name_span[1]]);
+    format(names, owner, "/", src[name_span[0]..name_span[1]]);
     m.egg.name = names[start..];
     m.dependency_count = dependencies.len - m.first_dependency;
     m.override_count = overrides.len - m.first_override;

@@ -157,6 +157,30 @@ scenario() {
     run barn verify
     enter ..
 
+    section "uppercase"
+    BARN_OWNER=Acme run barn hatch loud
+    run barn hatch shouty --owner ACME
+    show loud/barn.pkg shouty/barn.pkg
+    mkdir uppercase
+    enter uppercase
+    printf 'fn main() {}\n' > main.goose
+    write_pkg $'dependencies = ["Acme/numbers:0.1.0"];\noverrides = ["ACME/numbers:0.1.1"];\n'
+    run barn install
+    show barn.lock
+    run barn add ACME/stats
+    run barn add acme/Stats
+    run barn upgrade numbers
+    run barn upgrade Numbers
+    run barn remove ACME/stats
+    show barn.pkg
+    write_pkg $'dependencies = ["acme/numbers:0.1.0", "Acme/numbers:0.1.0"];\n'
+    run barn resolve
+    write_pkg $'dependencies = ["acme/Numbers:0.1.0"];\n'
+    run barn resolve
+    printf 'owner = "Acme";\nname = "app";\nversion = "0.1.0";\n' > barn.pkg
+    run barn resolve
+    enter ..
+
     section "resolution"
     run barn inspect "$fixtures/../app" --repo "$fixtures"
     run barn resolve "$fixtures/../app" --repo "$fixtures"
