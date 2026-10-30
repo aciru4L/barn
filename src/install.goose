@@ -237,11 +237,7 @@ fn install(dir: const u8[:], repository: const u8[:], force: bool) -> u8[>..] {
     return with_project(dir) { return install_project(it, repository, force); };
 }
 
-fn verify(dir: const u8[:], repository: const u8[:]) -> u8[>..] {
-    var lock_source: u8[>..] = [];
-    var entries: Locked[>..] = [];
-    guard read_lock(dir, lock_source, entries) else { return str("no barn.lock in ", dir); }
-    var problems: u8[>..] = [];
+fn check_copies(dir: const u8[:], repository: const u8[:], entries: const Locked[:], problems: u8[>..]&) -> i64 {
     var count = 0;
     for entry in entries {
         if is_hash(entry.hash) {
@@ -259,6 +255,15 @@ fn verify(dir: const u8[:], repository: const u8[:]) -> u8[>..] {
             }
         }
     }
+    return count;
+}
+
+fn verify(dir: const u8[:], repository: const u8[:]) -> u8[>..] {
+    var lock_source: u8[>..] = [];
+    var entries: Locked[>..] = [];
+    guard read_lock(dir, lock_source, entries) else { return str("no barn.lock in ", dir); }
+    var problems: u8[>..] = [];
+    let count = check_copies(dir, repository, entries, problems);
     guard problems.len == 0 else { return str(".barn/ differs from barn.lock:", problems); }
     print("verified ", count, if count == 1 { " egg" } else { " eggs" });
     return str("");
