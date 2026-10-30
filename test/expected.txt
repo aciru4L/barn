@@ -314,34 +314,38 @@ dependencies = [
 ];
 $ cd uppercase
 $ barn install
-warning: egg 'Acme/Numbers' is not lowercase: using 'acme/numbers'
-warning: egg 'ACME/numbers' is not lowercase: using 'acme/numbers'
+warning: owner 'Acme' is not lowercase: using 'acme'
+warning: owner 'ACME' is not lowercase: using 'acme'
 installed 1 egg, main.goose updated
   acme/numbers:0.1.1
 --- barn.lock
 locked = [
     "acme/numbers:0.1.1 sha256:1616b4a9c67415eace1a5512966ba98306a41cf86bbe2433ab45f2c283546eb7",
 ];
-$ barn add ACME/Stats
-warning: egg 'ACME/Stats' is not lowercase: using 'acme/stats'
-warning: egg 'Acme/Numbers' is not lowercase: using 'acme/numbers'
-warning: egg 'ACME/numbers' is not lowercase: using 'acme/numbers'
+$ barn add ACME/stats
+warning: owner 'ACME' is not lowercase: using 'acme'
+warning: owner 'Acme' is not lowercase: using 'acme'
 installed 2 eggs, main.goose updated
   acme/numbers:0.1.1
   acme/stats:0.1.0
 added acme/stats:0.1.0
-$ barn upgrade Numbers
-warning: egg 'Numbers' is not lowercase: using 'numbers'
-warning: egg 'Acme/Numbers' is not lowercase: using 'acme/numbers'
-warning: egg 'ACME/numbers' is not lowercase: using 'acme/numbers'
+$ barn add acme/Stats
+barn: bad name in 'acme/Stats': use a lowercase letter, then lowercase letters, digits and _; say 'stats'
+[exit 1]
+$ barn upgrade numbers
+warning: owner 'Acme' is not lowercase: using 'acme'
+warning: owner 'ACME' is not lowercase: using 'acme'
 installed 2 eggs
   acme/numbers:0.1.1
   acme/stats:0.1.0
 acme/numbers: 0.1.0 -> 0.1.1
 acme/numbers:0.2.0 available (incompatible)
-$ barn remove ACME/STATS
-warning: egg 'ACME/STATS' is not lowercase: using 'acme/stats'
-warning: egg 'ACME/numbers' is not lowercase: using 'acme/numbers'
+$ barn upgrade Numbers
+warning: owner 'ACME' is not lowercase: using 'acme'
+barn: barn.pkg has no dependency Numbers
+[exit 1]
+$ barn remove ACME/stats
+warning: owner 'ACME' is not lowercase: using 'acme'
 installed 1 egg, main.goose updated
   acme/numbers:0.1.1
 removed acme/stats:0.1.0
@@ -352,8 +356,11 @@ version = "0.1.0";
 dependencies = ["acme/numbers:0.1.1"];
 overrides = ["ACME/numbers:0.1.1"];
 $ barn resolve
-warning: egg 'Acme/numbers' is not lowercase: using 'acme/numbers'
+warning: owner 'Acme' is not lowercase: using 'acme'
 barn: ./barn.pkg: line 4: acme/numbers is in dependencies twice
+[exit 1]
+$ barn resolve
+barn: ./barn.pkg: line 4: bad name in 'acme/Numbers': use a lowercase letter, then lowercase letters, digits and _; say 'numbers'
 [exit 1]
 $ barn resolve
 warning: owner 'Acme' is not lowercase: using 'acme'

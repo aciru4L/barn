@@ -18,5 +18,6 @@ All notable changes to Barn are recorded here. The format follows
 ### Fixed
 
 - `--owner` and `BARN_OWNER` are lowercased, with a warning, instead of being rejected.
-- Egg names with uppercase letters, in `barn.pkg` or given to `add`, `remove` and `upgrade`, are
-  resolved as lowercase, with a warning.
+- Owners with uppercase letters, in `barn.pkg` or given to `add`, `remove` and `upgrade`, are
+  resolved as lowercase, with a warning. Egg names stay lowercase only, since they are folder
+  and import names; an uppercase one is an error that suggests the lowercase spelling.

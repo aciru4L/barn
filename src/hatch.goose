@@ -27,18 +27,8 @@ fn add_ignore_lines(path: const u8[:]) -> bool {
     return append_file(path, missing);
 }
 
-fn name_suggestion(name: const u8[:]) -> u8[>..] {
-    var suggestion: u8[>..] = [];
-    for c in name { suggestion.push(if c == '-' { '_' } else if c >= 'A' && c <= 'Z' { c + 32 } else { c }); }
-    return suggestion;
-}
-
 fn check_names(name: const u8[:], owner: const u8[:]) -> u8[>..] {
-    guard valid_name(name) else {
-        let suggestion = name_suggestion(name);
-        guard valid_name(suggestion) else { return str("bad egg name '", name, "': use ", NAME_RULE); }
-        return str("bad egg name '", name, "': use ", NAME_RULE, "; say '", suggestion, "'");
-    }
+    guard valid_name(name) else { return str("bad egg name '", name, "': use ", NAME_RULE, name_hint(name)); }
     guard owner.len > 0 else { return str("no owner: --owner NAME or BARN_OWNER"); }
     guard valid_owner(owner) else { return str("bad owner '", owner, "': use ", OWNER_RULE); }
     return str("");

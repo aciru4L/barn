@@ -49,9 +49,23 @@ fn lowercased(what: const u8[:], s: const u8[:], count: i64, out: u8[>..]&) -> c
     return lowered;
 }
 
+// The owner of an owner/name spec lowercased; the name is left to fail validation.
 fn lowercased_spec(spec: const u8[:], out: u8[>..]&) -> const u8[:] {
-    let colon = find(spec, ":");
-    return lowercased("egg", spec, if colon < 0 { spec.len } else { colon }, out);
+    let slash = find(spec, "/");
+    guard slash >= 0 else { return spec; }
+    return lowercased("owner", spec, slash, out);
+}
+
+fn name_suggestion(name: const u8[:]) -> u8[>..] {
+    var suggestion: u8[>..] = [];
+    for c in name { suggestion.push(if c == '-' { '_' } else if c >= 'A' && c <= 'Z' { c + 32 } else { c }); }
+    return suggestion;
+}
+
+fn name_hint(name: const u8[:]) -> u8[>..] {
+    let suggestion = name_suggestion(name);
+    guard valid_name(suggestion) else { return str(""); }
+    return str("; say '", suggestion, "'");
 }
 
 fn is_relative_path(path: const u8[:]) -> bool {
@@ -146,9 +160,10 @@ fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: O
     fn egg_name(s: const u8[:]) -> const u8[:] {
         let slash = find(s, "/");
         guard slash >= 0 else { fail(str("bad egg '", s, "': expected owner/name")); }
-        let egg = lowercased("egg", s, s.len, names);
+        let egg = lowercased("owner", s, slash, names);
         guard valid_owner(egg[..slash]) else { fail(str("bad owner in '", s, "': use ", OWNER_RULE)); }
-        guard valid_name(egg[slash + 1..]) else { fail(str("bad name in '", s, "': use ", NAME_RULE)); }
+        let name = s[slash + 1..];
+        guard valid_name(name) else { fail(str("bad name in '", s, "': use ", NAME_RULE, name_hint(name))); }
         return egg;
     }
 

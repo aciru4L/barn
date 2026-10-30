@@ -164,14 +164,18 @@ scenario() {
     mkdir uppercase
     enter uppercase
     printf 'fn main() {}\n' > main.goose
-    write_pkg $'dependencies = ["Acme/Numbers:0.1.0"];\noverrides = ["ACME/numbers:0.1.1"];\n'
+    write_pkg $'dependencies = ["Acme/numbers:0.1.0"];\noverrides = ["ACME/numbers:0.1.1"];\n'
     run barn install
     show barn.lock
-    run barn add ACME/Stats
+    run barn add ACME/stats
+    run barn add acme/Stats
+    run barn upgrade numbers
     run barn upgrade Numbers
-    run barn remove ACME/STATS
+    run barn remove ACME/stats
     show barn.pkg
     write_pkg $'dependencies = ["acme/numbers:0.1.0", "Acme/numbers:0.1.0"];\n'
+    run barn resolve
+    write_pkg $'dependencies = ["acme/Numbers:0.1.0"];\n'
     run barn resolve
     printf 'owner = "Acme";\nname = "app";\nversion = "0.1.0";\n' > barn.pkg
     run barn resolve
