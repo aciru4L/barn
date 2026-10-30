@@ -291,6 +291,74 @@ $ barn verify
 verified 0 eggs
 $ cd ..
 
+## uppercase
+$ barn hatch loud
+warning: owner 'Acme' is not lowercase: using 'acme'
+hatched acme/loud:0.1.0
+$ barn hatch shouty --owner ACME
+warning: owner 'ACME' is not lowercase: using 'acme'
+hatched acme/shouty:0.1.0
+--- loud/barn.pkg
+owner = "acme";
+name = "loud";
+version = "0.1.0";
+
+dependencies = [
+];
+--- shouty/barn.pkg
+owner = "acme";
+name = "shouty";
+version = "0.1.0";
+
+dependencies = [
+];
+$ cd uppercase
+$ barn install
+warning: egg 'Acme/Numbers' is not lowercase: using 'acme/numbers'
+warning: egg 'ACME/numbers' is not lowercase: using 'acme/numbers'
+installed 1 egg, main.goose updated
+  acme/numbers:0.1.1
+--- barn.lock
+locked = [
+    "acme/numbers:0.1.1 sha256:1616b4a9c67415eace1a5512966ba98306a41cf86bbe2433ab45f2c283546eb7",
+];
+$ barn add ACME/Stats
+warning: egg 'ACME/Stats' is not lowercase: using 'acme/stats'
+warning: egg 'Acme/Numbers' is not lowercase: using 'acme/numbers'
+warning: egg 'ACME/numbers' is not lowercase: using 'acme/numbers'
+installed 2 eggs, main.goose updated
+  acme/numbers:0.1.1
+  acme/stats:0.1.0
+added acme/stats:0.1.0
+$ barn upgrade Numbers
+warning: egg 'Numbers' is not lowercase: using 'numbers'
+warning: egg 'Acme/Numbers' is not lowercase: using 'acme/numbers'
+warning: egg 'ACME/numbers' is not lowercase: using 'acme/numbers'
+installed 2 eggs
+  acme/numbers:0.1.1
+  acme/stats:0.1.0
+acme/numbers: 0.1.0 -> 0.1.1
+acme/numbers:0.2.0 available (incompatible)
+$ barn remove ACME/STATS
+warning: egg 'ACME/STATS' is not lowercase: using 'acme/stats'
+warning: egg 'ACME/numbers' is not lowercase: using 'acme/numbers'
+installed 1 egg, main.goose updated
+  acme/numbers:0.1.1
+removed acme/stats:0.1.0
+--- barn.pkg
+owner = "acme";
+name = "app";
+version = "0.1.0";
+dependencies = ["acme/numbers:0.1.1"];
+overrides = ["ACME/numbers:0.1.1"];
+$ barn resolve
+warning: egg 'Acme/numbers' is not lowercase: using 'acme/numbers'
+barn: ./barn.pkg: line 4: acme/numbers is in dependencies twice
+[exit 1]
+$ barn resolve
+warning: owner 'Acme' is not lowercase: using 'acme'
+$ cd ..
+
 ## resolution
 $ barn inspect <root>/test/repository/../app --repo <root>/test/repository
 acme/api:0.1.0

@@ -14,3 +14,9 @@ All notable changes to Barn are recorded here. The format follows
   versions are an error.
 - A local repository with immutable releases and timestamped snapshots.
 - Prebuilt executables for Linux, macOS and Windows on each GitHub release.
+
+### Fixed
+
+- `--owner` and `BARN_OWNER` are lowercased, with a warning, instead of being rejected.
+- Egg names with uppercase letters, in `barn.pkg` or given to `add`, `remove` and `upgrade`, are
+  resolved as lowercase, with a warning.
