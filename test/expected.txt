@@ -1,0 +1,419 @@
+$ cd <work>
+
+## hatch and lay
+$ barn hatch numbers
+hatched acme/numbers:0.1.0
+--- numbers/barn.pkg
+owner = "acme";
+name = "numbers";
+version = "0.1.0";
+
+dependencies = [
+];
+--- numbers/src/numbers.goose
+namespace numbers;
+
+fn honk() -> const u8[:] {
+    return "honk from numbers";
+}
+--- numbers/main.goose
+import src.numbers;
+
+fn main() {
+    print(numbers::honk());
+}
+--- numbers/.gitignore
+.barn/
+*.exe
+$ barn hatch numbers
+barn: barn.pkg already exists in numbers
+[exit 1]
+$ barn hatch Bad-Name
+barn: bad egg name 'Bad-Name': use a lowercase letter, then lowercase letters, digits and _; say 'bad_name'
+[exit 1]
+$ cd numbers
+$ barn lay --release
+released acme/numbers:0.1.0  sha256:63440df812a1af00adba5502eb4c994c2d08e33fbd9773d782dbd819d09f3657
+$ barn lay --release
+barn: acme/numbers:0.1.0 is already released
+[exit 1]
+$ barn lay --release
+released acme/numbers:0.1.1  sha256:1616b4a9c67415eace1a5512966ba98306a41cf86bbe2433ab45f2c283546eb7
+$ barn lay --release
+released acme/numbers:0.2.0  sha256:c3db5d1ef3279fcc5a5e7f2310c7b8501f31840af61d0d5becd21cef94648502
+$ barn lay
+laid acme/numbers:0.2.0_snapshot_<stamp>  sha256:c3db5d1ef3279fcc5a5e7f2310c7b8501f31840af61d0d5becd21cef94648502
+$ cd ..
+
+## add and upgrade
+$ barn hatch app
+hatched acme/app:0.1.0
+$ cd app
+$ barn add acme/numbers:0.1.0
+installed 1 egg, main.goose updated
+  acme/numbers:0.1.0
+added acme/numbers:0.1.0
+--- barn.pkg
+owner = "acme";
+name = "app";
+version = "0.1.0";
+
+dependencies = [
+    "acme/numbers:0.1.0",
+];
+--- barn.lock
+locked = [
+    "acme/numbers:0.1.0 sha256:63440df812a1af00adba5502eb4c994c2d08e33fbd9773d782dbd819d09f3657",
+];
+--- main.goose
+import numbers from "./.barn/numbers";
+
+import src.app;
+
+fn main() {
+    print(app::honk());
+}
+$ barn upgrade
+installed 1 egg
+  acme/numbers:0.1.1
+acme/numbers: 0.1.0 -> 0.1.1
+acme/numbers:0.2.0 available (incompatible)
+$ barn add acme/numbers
+installed 1 egg
+  acme/numbers:0.2.0
+acme/numbers: 0.1.1 -> 0.2.0 (incompatible)
+$ barn add acme/numbers:0.2.0
+acme/numbers:0.2.0 unchanged
+$ barn add acme/numbers:0.2.0_snapshot
+installed 1 egg
+  acme/numbers:0.2.0_snapshot_<stamp>
+acme/numbers: 0.2.0 -> 0.2.0_snapshot
+$ barn inspect
+acme/app:0.1.0
+\- acme/numbers:0.2.0_snapshot -> 0.2.0_snapshot_<stamp>
+$ barn resolve
+acme/numbers:0.2.0_snapshot_<stamp>
+$ barn add acme/numbers:0.2.0_snapshot
+acme/numbers:0.2.0_snapshot unchanged
+$ barn add acme/nothing
+barn: acme/nothing not found
+[exit 1]
+$ barn add nothing
+barn: bad egg 'nothing'
+[exit 1]
+$ barn add acme/numbers:0.2.0
+installed 1 egg
+  acme/numbers:0.2.0
+acme/numbers: 0.2.0_snapshot -> 0.2.0
+
+## run
+$ goose main.goose
+honk from numbers
+
+## verify and edited copies
+$ barn verify
+verified 1 egg
+$ barn verify
+barn: .barn/ differs from barn.lock:
+  .barn/numbers was edited:
+    .barn/numbers/numbers.goose was edited
+[exit 1]
+$ barn install
+barn: nothing was changed:
+  .barn/numbers was edited:
+    .barn/numbers/numbers.goose was edited
+--force overrides
+[exit 1]
+$ barn install --force
+installed 1 egg
+  acme/numbers:0.2.0
+$ barn verify
+verified 1 egg
+
+## repository changed
+$ barn install
+barn: nothing was changed:
+  acme/numbers:0.2.0: changed in the repository since barn lay:
+    numbers.goose was edited
+[exit 1]
+$ barn install
+barn: nothing was changed:
+  acme/numbers:0.2.0: the repository copy differs from barn.lock:
+    numbers.goose was edited
+--force overrides
+[exit 1]
+$ barn install --force
+installed 1 egg
+  acme/numbers:0.2.0
+$ barn verify
+verified 1 egg
+
+## remove
+$ barn remove numbers
+installed 0 eggs, main.goose updated
+removed acme/numbers:0.2.0
+warning: no longer in .barn/, but used:
+  main.goose:4 uses numbers
+--- barn.pkg
+owner = "acme";
+name = "app";
+version = "0.1.0";
+
+dependencies = [
+];
+--- main.goose
+import src.app;
+
+fn main() {
+    print(numbers::honk());
+}
+--- barn.lock
+locked = [
+];
+$ barn remove numbers
+barn: barn.pkg has no dependency numbers
+[exit 1]
+$ cd ..
+
+## transitive
+$ barn hatch stats
+hatched acme/stats:0.1.0
+$ cd stats
+$ barn add acme/numbers:0.1.0
+installed 1 egg, main.goose updated
+  acme/numbers:0.1.0
+added acme/numbers:0.1.0
+$ barn lay --release
+released acme/stats:0.1.0  sha256:132c0e0b0ebf0dda11a143939cd2b3536592ba63bd4b8326926dcea21be61aa0
+$ cd ../app
+$ barn add acme/stats
+installed 2 eggs, main.goose updated
+  acme/stats:0.1.0
+  acme/numbers:0.1.0
+added acme/stats:0.1.0
+$ barn inspect
+acme/app:0.1.0
+\- acme/stats:0.1.0
+   \- acme/numbers:0.1.0
+$ barn remove stats
+installed 0 eggs, main.goose updated
+removed acme/stats:0.1.0
+warning: no longer in .barn/, but used:
+  main.goose:4 uses numbers
+$ cd ..
+
+## barn.pkg layouts
+$ cd layouts
+$ barn add acme/numbers:0.1.1
+installed 2 eggs, main.goose updated
+  acme/numbers:0.1.1
+  acme/stats:0.1.0
+acme/numbers: 0.1.0 -> 0.1.1
+$ barn remove stats
+installed 1 egg, main.goose updated
+  acme/numbers:0.1.1
+removed acme/stats:0.1.0
+--- barn.pkg
+owner = "acme";
+name = "app";
+version = "0.1.0";
+
+dependencies = [
+    "acme/numbers:0.1.1",   // the maths
+];
+
+// after
+$ barn add acme/stats
+installed 2 eggs, main.goose updated
+  acme/numbers:0.1.0
+  acme/stats:0.1.0
+added acme/stats:0.1.0
+--- barn.pkg
+owner = "acme";
+name = "app";
+version = "0.1.0";
+dependencies = [
+  "acme/numbers:0.1.0",  // two spaces
+  "acme/stats:0.1.0",
+];
+$ barn add acme/stats
+installed 2 eggs, main.goose updated
+  acme/stats:0.1.0
+  acme/numbers:0.1.0
+added acme/stats:0.1.0
+--- barn.pkg
+owner = "acme";
+name = "app";
+version = "0.1.0";
+
+dependencies = [
+    "acme/stats:0.1.0",
+];
+$ barn add acme/stats acme/numbers:0.1.1
+installed 2 eggs
+  acme/stats:0.1.0
+  acme/numbers:0.1.1
+added acme/stats:0.1.0
+added acme/numbers:0.1.1
+--- barn.pkg
+owner = "acme";
+name = "app";
+version = "0.1.0";
+dependencies = ["acme/stats:0.1.0", "acme/numbers:0.1.1"];
+$ barn remove stats
+installed 1 egg, main.goose updated
+  acme/numbers:0.1.1
+removed acme/stats:0.1.0
+--- barn.pkg
+owner = "acme";
+name = "app";
+version = "0.1.0";
+dependencies = ["acme/numbers:0.1.1"];
+$ cd ..
+
+## local override
+$ cd local
+$ barn install
+installed 1 egg, main.goose updated
+  acme/numbers:0.2.0  (../numbers)
+$ barn inspect
+acme/app:0.1.0
+\- acme/numbers:0.1.0 -> 0.2.0  (../numbers)
+--- main.goose
+import numbers from "../numbers/src";
+
+fn main() {}
+--- barn.lock
+locked = [
+    "acme/numbers:0.2.0 local",
+];
+$ barn verify
+verified 0 eggs
+$ cd ..
+
+## resolution
+$ barn inspect <root>/test/repository/../app --repo <root>/test/repository
+acme/api:0.1.0
++- acme/web:1.2.0 -> 1.4.1
+|  \- acme/net:0.3.2
++- example/auth:1.0.0
+|  +- acme/web:1.4.1 (*)
+|  \- example/json:0.5.0
+\- example/json:0.5.0
+$ barn resolve <root>/test/repository/../app --repo <root>/test/repository
+acme/web:1.4.1
+example/auth:1.0.0
+example/json:0.5.0
+acme/net:0.3.2
+$ cd resolution
+$ barn inspect --repo <root>/test/repository
+barn: cannot resolve acme/app:
+  example/json: incompatible versions
+    the project wants 0.6.0
+    example/auth:1.0.0 wants 0.5.0
+  a/b:1.0.0 not found (wanted by the project)
+[exit 1]
+$ barn inspect --repo <root>/test/repository
+acme/app:0.1.0
++- example/auth:1.0.0
+|  +- acme/web:1.4.1
+|  |  \- acme/net:0.3.2
+|  \- example/json:0.5.0 -> 0.6.0  (override)
+\- example/json:0.6.0  (override)
+$ barn resolve --repo <root>/test/repository
+warning: unused override acme/net
+example/json:0.5.0
+$ barn resolve --repo <root>/test/repository
+barn: cannot resolve acme/app:
+  no snapshot of acme/net:0.3.0 (wanted by the project)
+[exit 1]
+$ cd ..
+
+## barn.pkg errors
+$ cd errors
+$ barn resolve --repo <root>/test/repository
+$ barn resolve --repo <root>/test/repository
+barn: ./barn.pkg: line 4: dependencyManagement is not supported: use overrides
+[exit 1]
+$ barn resolve --repo <root>/test/repository
+barn: ./barn.pkg: line 4: local is not supported: use overrides
+[exit 1]
+$ barn resolve --repo <root>/test/repository
+barn: ./barn.pkg: line 4: 'example/json' needs a version
+[exit 1]
+$ barn resolve --repo <root>/test/repository
+barn: ./barn.pkg: line 4: '0.4.0->0.5.0': ranges are not supported
+[exit 1]
+$ barn resolve --repo <root>/test/repository
+barn: ./barn.pkg: line 4: bad version '0.4'
+[exit 1]
+$ barn resolve --repo <root>/test/repository
+barn: ./barn.pkg: line 4: example/json is in dependencies twice
+[exit 1]
+$ barn resolve --repo <root>/test/repository
+barn: ./barn.pkg: line 4: version is given twice
+[exit 1]
+$ barn resolve --repo <root>/test/repository
+barn: ./barn.pkg: line 4: unknown key 'colour'
+[exit 1]
+$ cd ..
+
+## usage
+$ barn
+barn: the package manager for Goose
+
+usage: barn <command> [arguments] [options]
+
+commands:
+  hatch <name>      create a project
+  install [dir]     install the project's eggs into .barn/
+  add <egg>...      add dependencies
+  remove <egg>...   remove dependencies
+  upgrade [egg]...  upgrade dependencies to their newest compatible releases
+  verify [dir]      check .barn/ against barn.lock
+  lay [dir]         put the egg into the repository
+  inspect [dir]     show the dependency tree
+  resolve [dir]     list the eggs the project uses
+  help [command]    show help
+  version           show barn's version
+
+options:
+  --repo DIR        the repository (default: $BARN_REPO, else ~/.barn/repository)
+  --owner NAME      the owner of a new egg (default: $BARN_OWNER)
+  --here            hatch: in the current folder
+  -y, --yes         hatch: do not ask
+  --force           install, add, remove, upgrade: replace edited or changed eggs
+  --release         lay: a release instead of a snapshot
+  -h, --help        help for the command
+[exit 2]
+$ barn frob
+barn: unknown command 'frob'
+Run 'barn help' for usage.
+[exit 2]
+$ barn install --bogus
+barn: unknown option '--bogus' for install
+Run 'barn help' for usage.
+[exit 2]
+$ barn hatch
+barn: usage: barn hatch <name>
+Run 'barn help' for usage.
+[exit 2]
+$ barn add
+barn: usage: barn add <egg>...
+Run 'barn help' for usage.
+[exit 2]
+$ barn install a b
+barn: install takes at most one folder
+Run 'barn help' for usage.
+[exit 2]
+$ barn help lay
+usage: barn lay [dir] [--release] [--repo DIR]
+
+Puts the egg into the repository: a new snapshot, or with
+--release the release.
+$ barn help frob
+barn: unknown command 'frob'
+Run 'barn help' for usage.
+[exit 2]
+$ barn version
+barn 0.1.0
