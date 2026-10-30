@@ -416,4 +416,4 @@ barn: unknown command 'frob'
 Run 'barn help' for usage.
 [exit 2]
 $ barn version
-barn 0.1.0
+barn <version>

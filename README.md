@@ -8,7 +8,8 @@ A package manager for [Goose](https://github.com/aardappel/goose). Packages are
 
 ## Build
 
-Barn is written in Goose and needs Goose 2026.3 or later on `PATH`.
+Each [release](https://github.com/aciru4L/barn/releases) has prebuilt executables for
+Linux, macOS and Windows. To build barn yourself, put Goose 2026.3 or later on `PATH`:
 
 ```sh
 goose build barn.goose -o bin/barn
