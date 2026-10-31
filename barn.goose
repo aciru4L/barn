@@ -36,6 +36,7 @@ fn help() {
 
         options:
           --owner NAME      the owner of a new egg (default: $BARN_OWNER)
+          --app             hatch: an app, with main.goose
           --here            hatch: in the current folder
           -y, --yes         hatch: do not ask
           --force           install, add, remove, upgrade: replace edited or changed eggs
@@ -51,9 +52,10 @@ fn help() {
 struct CommandHelp { command: const u8[:], usage: const u8[:], summary: const u8[:] }
 
 let COMMAND_HELP: const CommandHelp[14] = [
-    CommandHelp { command: "hatch", usage: "barn hatch <name> [--here] [--owner NAME] [-y]", summary: """
+    CommandHelp { command: "hatch", usage: "barn hatch <name> [--app] [--here] [--owner NAME] [-y]", summary: """
                       Creates ./<name>, or with --here the current folder, with barn.json,
-                      src/<name>.goose, main.goose, test/main_test.goose and .gitignore.
+                      <name>.goose, test/main_test.goose and .gitignore, and with --app
+                      main.goose as well.
                       """ },
     CommandHelp { command: "install", usage: "barn install [dir] [--force]", summary: """
                       Installs the project's eggs into .barn/, updates the imports in
@@ -123,7 +125,7 @@ fn barn_home(out: u8[>..]&) -> bool {
     return true;
 }
 
-struct Flags { here: bool = false, yes: bool = false, force: bool = false, release: bool = false }
+struct Flags { here: bool = false, yes: bool = false, force: bool = false, release: bool = false, app: bool = false }
 
 let COMMANDS: const u8[:][12] = [
     "hatch", "install", "add", "remove", "upgrade", "verify", "build", "run", "test", "lay", "inspect", "resolve",
@@ -145,7 +147,7 @@ fn check_argument_count(command: const u8[:], count: i64) {
 
 fn run_hatch(arguments: const u8[:][:], owner: const u8[:], flags: Flags) -> u8[>..] {
     guard arguments.len == 1 else { fail_usage("usage: barn hatch <name>"); }
-    return hatch(arguments[0], flags.here, owner, flags.yes);
+    return hatch(arguments[0], flags.here, owner, flags.yes, flags.app);
 }
 
 fn run_listing(dir: const u8[:], eggs: const u8[:], inspects: bool) -> u8[>..] {
@@ -184,6 +186,7 @@ fn run(command: const u8[:], argv: u8[:][:]) -> u8[>..] {
         if a == "-h" || a == "--help" { command_help(command); return str(""); }
         else if a == "-y" || a == "--yes" { flags.yes = true; }
         else if a == "--here" { flags.here = true; }
+        else if a == "--app" { flags.app = true; }
         else if a == "--force" { flags.force = true; }
         else if a == "--release" { flags.release = true; }
         else if a == "--owner" {

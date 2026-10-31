@@ -20,6 +20,16 @@ fn format_entry(out: u8[>..]&, key: const u8[:], value: const u8[:], is_last: bo
     out.append(if is_last { "\n" } else { ",\n" });
 }
 
+fn format_excludes(out: u8[>..]&, excludes: (const u8[:])[:]) {
+    guard excludes.len > 0 else { return; }
+    out.append("  \"exclude\": [");
+    for e, i in excludes {
+        if i > 0 { out.append(", "); }
+        json::format_string(out, e);
+    }
+    out.append("],\n");
+}
+
 fn format_dependencies(out: u8[>..]&, dependencies: const Dependency[:]) {
     guard dependencies.len > 0 else { out.append("  \"dependencies\": {}"); return; }
     out.append("  \"dependencies\": {\n");
@@ -37,7 +47,8 @@ fn format_overrides(out: u8[>..]&, overrides: const Override[:]) {
     out.append("  }");
 }
 
-fn package_text(m: Manifest, dependencies: const Dependency[:], overrides: const Override[:]) -> u8[>..] {
+fn package_text(m: Manifest, dependencies: const Dependency[:], overrides: const Override[:],
+                excludes: (const u8[:])[:]) -> u8[>..] {
     let slash = find(m.egg.name, "/");
     var out = str("{\n");
     format_field(out, "owner", m.egg.name[..slash]);
@@ -45,6 +56,8 @@ fn package_text(m: Manifest, dependencies: const Dependency[:], overrides: const
     format_field(out, "version", str(m.egg.version));
     if m.main.len > 0 { format_field(out, "main", m.main); }
     if m.test.len > 0 { format_field(out, "test", m.test); }
+    if m.source.len > 0 { format_field(out, "source", m.source); }
+    format_excludes(out, excludes);
     format_dependencies(out, dependencies);
     format_overrides(out, overrides);
     out.append("\n}\n");
@@ -52,7 +65,7 @@ fn package_text(m: Manifest, dependencies: const Dependency[:], overrides: const
 }
 
 fn with_dependencies(p: Project, dependencies: const Dependency[:]) -> u8[>..] {
-    package_text(p.manifest, dependencies, p.overrides)
+    package_text(p.manifest, dependencies, p.overrides, p.excludes)
 }
 
 fn replace_dependency(p: Project, d: Dependency, v: Version) -> u8[>..] {

@@ -6,22 +6,22 @@ import src.project;
 import src.eggs;
 import src.checksum;
 import src.files;
+import src.contents;
 
 fn check_layable(p: Project) -> u8[>..] {
     let name = short_name(p.manifest.egg.name);
+    guard is_dir(source_dir(p)) else { return str("the source folder ", source_of(p.manifest), " does not exist"); }
+    let entry_file = entry_path(p);
     var entry: u8[>..] = [];
-    guard read_file(str(p.dir, "/src/", name, ".goose"), entry) else { return str("no src/", name, ".goose"); }
+    guard read_file(str(p.dir, "/", entry_file), entry) else { return str("no ", entry_file); }
     guard find(entry, str("namespace ", name, ";")) >= 0 else {
-        return str("src/", name, ".goose needs namespace ", name, ";");
-    }
-    for reserved in ["barn.json", SUM_FILE] {
-        guard !file_exists(str(p.dir, "/src/", reserved)) else { return str("src/", reserved, " is not allowed"); }
+        return str(entry_file, " needs namespace ", name, ";");
     }
     return str("");
 }
 
 fn stage_egg(p: Project, stage: const u8[:], sums: u8[>..]&) -> bool {
-    let staged = copy_tree(str(p.dir, "/src"), stage) && write_file(str(stage, "/barn.json"), p.text) &&
+    let staged = copy_egg_files(p, stage) && write_file(str(stage, "/barn.json"), p.text) &&
                  file_sums(stage, sums) && write_file(str(stage, "/", SUM_FILE), sums);
     if !staged { delete_tree(stage); }
     return staged;

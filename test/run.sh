@@ -75,7 +75,7 @@ scenario() {
 
     section "hatch and lay"
     run barn hatch numbers
-    show numbers/barn.json numbers/src/numbers.goose numbers/main.goose numbers/test/main_test.goose numbers/.gitignore
+    show numbers/barn.json numbers/numbers.goose numbers/test/main_test.goose numbers/.gitignore
     run barn hatch numbers
     run barn hatch Bad-Name
     enter numbers
@@ -91,7 +91,7 @@ scenario() {
     enter ..
 
     section "add and upgrade"
-    run barn hatch app
+    run barn hatch app --app
     enter app
     run barn add acme/numbers:0.1.0
     show barn.json barn.lock main.goose test/main_test.goose
@@ -304,6 +304,52 @@ scenario() {
     run barn help test
     run barn help frob
     run barn version
+
+    section "egg contents"
+    run barn hatch shapes --app
+    enter shapes
+    mkdir notes bench docs examples .private
+    printf 'namespace shapes;\nfn area() -> int { return 1; }\n' > extra.goose
+    printf 'todo\n' > notes/todo.txt
+    printf 'fn main() {}\n' > bench/speed.goose
+    printf 'docs\n' > docs/guide.md
+    printf 'fn main() {}\n' > examples/demo.goose
+    printf 'secret\n' > .private/key
+    printf 'license\n' > LICENSE
+    printf 'readme\n' > README.md
+    printf 'built\n' > shapes.exe
+    sed -i 's/"version": "0.1.0",/"version": "0.1.0",\n  "exclude": ["notes"],/' barn.json
+    run barn lay --release
+    run ls -A "$BARN_HOME/eggs/acme/shapes/0.1.0"
+    run barn add acme/numbers:0.1.0
+    show barn.json
+    enter ..
+    mkdir layered
+    enter layered
+    mkdir lib
+    printf 'namespace layered;\n' > lib/layered.goose
+    printf 'license\n' > LICENSE
+    printf '{"owner": "acme", "name": "layered", "version": "0.1.0", "source": "lib"}\n' > barn.json
+    run barn lay --release
+    run ls -A "$BARN_HOME/eggs/acme/layered/0.1.0"
+    rm lib/layered.goose
+    run barn lay
+    printf 'namespace other;\n' > lib/layered.goose
+    run barn lay
+    printf '{"owner": "acme", "name": "layered", "version": "0.1.0", "source": "missing"}\n' > barn.json
+    run barn lay
+    printf '{"owner": "acme", "name": "layered", "version": "0.1.0", "source": "../lib"}\n' > barn.json
+    run barn lay
+    printf '{"owner": "acme", "name": "layered", "version": "0.1.0", "source": "lib"}\n' > barn.json
+    printf 'namespace layered;\n' > lib/layered.goose
+    enter ..
+    mkdir layered_user
+    enter layered_user
+    printf 'fn main() {}\n' > main.goose
+    write_pkg $'"dependencies": {"acme/layered": "0.1.0"},\n  "overrides": {"acme/layered": "../layered"}'
+    run barn install
+    show main.goose
+    enter ..
 
     section "releases only"
     silently barn hatch draft

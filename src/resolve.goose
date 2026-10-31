@@ -6,8 +6,8 @@ import src.manifest;
 import src.eggs;
 
 struct Node {
-    egg: const u8[:], version: Version, manifest: i64, override: i64 = -1, first_request: i64 = 0,
-    request_count: i64 = 0,
+    egg: const u8[:], version: Version, manifest: i64, source: const u8[:], override: i64 = -1,
+    first_request: i64 = 0, request_count: i64 = 0,
 }
 
 struct Request { from: i64, egg: const u8[:], wanted: Version, named: i64, chosen: i64 = -1 }
@@ -41,6 +41,7 @@ fn resolve<F>(dir: const u8[:], eggs: const u8[:]) -> u8[>..] {
     var names: u8[>..] = [];
     var dependencies: Dependency[>..] = [];
     var overrides: Override[>..] = [];
+    var excludes: (const u8[:])[>..] = [];
     var manifests: Manifest[>..] = [];
     var nodes: Node[>..] = [];
     var requests: Request[>..] = [];
@@ -54,7 +55,7 @@ fn resolve<F>(dir: const u8[:], eggs: const u8[:]) -> u8[>..] {
     fn load_file(path: const u8[:]) -> i64 {
         let start = text.len;
         guard read_file(path, text) else { fail(str("cannot read ", path)); }
-        let m, error = parse_manifest(text[start..], dependencies, overrides, names);
+        let m, error = parse_manifest(text[start..], dependencies, overrides, excludes, names);
         guard error.len == 0 else { fail(str(path, ": ", error)); }
         manifests.push(m);
         return manifests.len - 1;
@@ -81,7 +82,8 @@ fn resolve<F>(dir: const u8[:], eggs: const u8[:]) -> u8[>..] {
         let start = keys.len;
         keys.append(key);
         node_of_key.insert(keys[start..], nodes.len);
-        nodes.push(Node { egg: egg, version: v, manifest: loaded, override: override });
+        let source = if loaded >= 0 { source_of(manifests[loaded]) } else { "." };
+        nodes.push(Node { egg: egg, version: v, manifest: loaded, source: source, override: override });
         return nodes.len - 1;
     }
 

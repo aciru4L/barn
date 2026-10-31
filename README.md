@@ -48,7 +48,7 @@ cd numbers
 barn lay --release               # put numbers 0.1.0 into ~/.barn/eggs
 cd ..
 
-barn hatch app                   # a project that uses it
+barn hatch app --app             # a program that uses it
 cd app
 barn add acme/numbers            # depend on the newest release, and install it
 barn inspect
@@ -77,7 +77,7 @@ egg to the version to use instead, or to a local folder starting with `./` or `.
 
 | Command | Does |
 |---|---|
-| `barn hatch <name>` | create a project |
+| `barn hatch <name> [--app]` | create an egg, or with `--app` a program |
 | `barn install` | install the project's eggs into `.barn/` |
 | `barn add <egg>...` | add dependencies |
 | `barn remove <egg>...` | remove dependencies |
@@ -96,10 +96,32 @@ After `--`, `build` passes options to `goose build` and `run` passes arguments t
 program. Running `goose` directly skips these checks.
 
 `barn test` does the same checks, then runs `test/main_test.goose`, which `barn hatch`
-writes next to `main.goose`. It imports the egg from `../src`, and a test fails by exiting
-with a status other than 0. `"test": "path.goose"` in `barn.json` runs another file, as
-`"main": "path.goose"` does for `barn run`. The tests stay out of the egg, since `barn lay`
-only puts `src/` into `~/.barn/eggs`.
+writes. It imports the egg from `..`, and a test fails by exiting with a status other than
+0. `"test": "path.goose"` in `barn.json` runs another file, as `"main": "path.goose"` does
+for `barn run`.
+
+`barn help <command>` shows a command's options.
+
+## What an egg holds
+
+`barn hatch numbers` makes an egg: `barn.json`, `numbers.goose`, which declares
+`namespace numbers;`, `test/main_test.goose` and `.gitignore`. `barn hatch app --app` also
+writes `main.goose`, for `barn run`.
+
+`barn lay` puts into the egg every file under `source`, which is the project folder unless
+`barn.json` says `"source": "lib"` or another folder inside it. `<source>/<name>.goose` must
+exist and declare `namespace <name>;`. These stay out:
+
+- dot-files and dot-folders, such as `.git` and `.barn`
+- built files ending in `.exe`, `.pdb`, `.ilk` or `.obj`
+- `barn.json`, which Barn writes into the egg itself, and `barn.lock`
+- the `main` and `test` files
+- `test/`, `tests/`, `examples/`, `bench/` and `docs/`
+- whatever `"exclude": ["notes", "tools/gen.goose"]` lists
+
+`LICENSE*` and `README*` at the top of the project always ship.
+
+## The eggs folder
 
 Barn keeps its eggs in `~/.barn/eggs`, or in `eggs/` under `BARN_HOME` when that is set.
 `install`, `add`, `remove`, `upgrade` and `lay` create the folder when it is missing; the
@@ -111,8 +133,6 @@ snapshot it already is.
 In `barn.json`, `0.1.0` means that release and nothing else, `0.1.0_snapshot` the newest
 snapshot of it, and `0.1.0_snapshot_<stamp>_<hash>` that one snapshot. `barn add` without a
 version picks the newest release.
-
-`barn help <command>` shows a command's options.
 
 ## Contributing
 

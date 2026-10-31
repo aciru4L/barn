@@ -10,20 +10,14 @@ hatched acme/numbers:0.1.0
   "version": "0.1.0",
   "dependencies": {}
 }
---- numbers/src/numbers.goose
+--- numbers/numbers.goose
 namespace numbers;
 
 fn honk() -> const u8[:] {
     return "honk from numbers";
 }
---- numbers/main.goose
-import src.numbers;
-
-fn main() {
-    print(numbers::honk());
-}
 --- numbers/test/main_test.goose
-import numbers from "../src";
+import numbers from "..";
 
 fn main() {
     guard numbers::honk() == "honk from numbers" else {
@@ -62,7 +56,7 @@ $ ls <work>/home/eggs/acme/numbers
 $ cd ..
 
 ## add and upgrade
-$ barn hatch app
+$ barn hatch app --app
 hatched acme/app:0.1.0
 $ cd app
 $ barn add acme/numbers:0.1.0
@@ -85,7 +79,7 @@ locked = [
 --- main.goose
 import numbers from "./.barn/numbers";
 
-import src.app;
+import app;
 
 fn main() {
     print(app::honk());
@@ -93,7 +87,7 @@ fn main() {
 --- test/main_test.goose
 import numbers from "../.barn/numbers";
 
-import app from "../src";
+import app from "..";
 
 fn main() {
     guard app::honk() == "honk from app" else {
@@ -187,7 +181,7 @@ barn: no test/main_test.goose
 [exit 1]
 $ cd ../checks
 $ barn install
-installed 1 egg, no main.goose, checks/all.goose updated
+installed 1 egg, checks/all.goose updated
   acme/numbers:0.2.0
 --- checks/all.goose
 import numbers from "../.barn/numbers";
@@ -273,13 +267,13 @@ warning: no longer in .barn/, but used:
   "dependencies": {}
 }
 --- main.goose
-import src.app;
+import app;
 
 fn main() {
     print(numbers::honk());
 }
 --- test/main_test.goose
-import app from "../src";
+import app from "..";
 
 fn main() {
     guard app::honk() == "honk from app" else {
@@ -300,7 +294,7 @@ $ barn hatch stats
 hatched acme/stats:0.1.0
 $ cd stats
 $ barn add acme/numbers:0.1.0
-installed 1 egg, main.goose updated, test/main_test.goose updated
+installed 1 egg, test/main_test.goose updated
   acme/numbers:0.1.0
 added acme/numbers:0.1.0
 $ barn lay --release
@@ -381,7 +375,7 @@ $ barn inspect
 acme/app:0.1.0
 \- acme/numbers:0.1.0 -> 0.2.0  (../numbers)
 --- main.goose
-import numbers from "../numbers/src";
+import numbers from "../numbers";
 
 fn main() {}
 --- barn.lock
@@ -601,6 +595,7 @@ commands:
 
 options:
   --owner NAME      the owner of a new egg (default: $BARN_OWNER)
+  --app             hatch: an app, with main.goose
   --here            hatch: in the current folder
   -y, --yes         hatch: do not ask
   --force           install, add, remove, upgrade: replace edited or changed eggs
@@ -655,6 +650,65 @@ Run 'barn help' for usage.
 $ barn version
 barn <version>
 
+## egg contents
+$ barn hatch shapes --app
+hatched acme/shapes:0.1.0
+$ cd shapes
+$ barn lay --release
+released acme/shapes:0.1.0  sha256:d56e86e4218405764e729563b99fba93c1d7464a94988ff2c09bdc4860520158
+$ ls -A <work>/home/eggs/acme/shapes/0.1.0
+LICENSE
+README.md
+barn.json
+barn.sha256
+extra.goose
+shapes.goose
+$ barn add acme/numbers:0.1.0
+installed 1 egg, main.goose updated, test/main_test.goose updated
+  acme/numbers:0.1.0
+added acme/numbers:0.1.0
+--- barn.json
+{
+  "owner": "acme",
+  "name": "shapes",
+  "version": "0.1.0",
+  "exclude": ["notes"],
+  "dependencies": {
+    "acme/numbers": "0.1.0"
+  }
+}
+$ cd ..
+$ cd layered
+$ barn lay --release
+released acme/layered:0.1.0  sha256:bdca4ffaf9e5957e78f9fab8e9c2b0bb24724b2b34ee4572527d754970ca9ca2
+$ ls -A <work>/home/eggs/acme/layered/0.1.0
+LICENSE
+barn.json
+barn.sha256
+layered.goose
+$ barn lay
+barn: no lib/layered.goose
+[exit 1]
+$ barn lay
+barn: lib/layered.goose needs namespace layered;
+[exit 1]
+$ barn lay
+barn: the source folder missing does not exist
+[exit 1]
+$ barn lay
+barn: ./barn.json: line 1: bad source '../lib'
+[exit 1]
+$ cd ..
+$ cd layered_user
+$ barn install
+installed 1 egg, main.goose updated
+  acme/layered:0.1.0  (../layered)
+--- main.goose
+import layered from "../layered/lib";
+
+fn main() {}
+$ cd ..
+
 ## releases only
 $ barn hatch draft
 $ cd draft
@@ -670,7 +724,7 @@ barn: cannot resolve acme/app:
 barn.json unchanged
 [exit 1]
 $ barn add acme/draft:0.1.0_snapshot
-installed 1 egg, no main.goose
+installed 1 egg
   acme/draft:0.1.0_snapshot_<stamp>_16eee3e1da5f
 added acme/draft:0.1.0_snapshot
 $ cd ..

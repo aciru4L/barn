@@ -58,7 +58,7 @@ fn run_goose(command: const u8[:], dir: const u8[:], eggs: const u8[:], passed: 
     return with_project(dir) { p =>
         let file = if command == "test" { test_file(p) } else { main_file(p) };
         let root: u8[>..] = if dir == "." { str(file) } else { str(dir, "/", file) };
-        guard command != "test" || file_exists(root) else { return str("no ", root); }
+        guard file_exists(root) else { return str("no ", root); }
         return resolve(dir, eggs) { b =>
             let problem = check_build(p, b, eggs);
             guard problem.len == 0 else { return problem; }

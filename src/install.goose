@@ -78,9 +78,11 @@ fn import_lines(b: Build, root: const u8[:]) -> u8[>..] {
     for node in b.used[1..] {
         let name = short_name(b.nodes[node].egg);
         let folder = local_path(b, node);
+        let inner = b.nodes[node].source;
+        let package: u8[>..] = if inner == "." { str(folder) } else { str(folder, "/", inner) };
         let source: u8[>..] = if folder.len == 0 { str(up, ".barn/", name) }
-                              else if starts_with(folder, "../") && up == "./" { str(folder, "/src") }
-                              else { str(up, folder, "/src") };
+                              else if starts_with(folder, "../") && up == "./" { str(package) }
+                              else { str(up, package) };
         format(lines, "import ", name, " from \"", source, "\";\n");
     }
     return lines;
@@ -104,7 +106,7 @@ fn update_root_files(p: Project, b: Build, known: const u8[:][:]) -> u8[>..], u8
         format(note, ", ", root, " updated");
     }
 
-    update(main_file(p), p.manifest.main.len > 0, true);
+    update(main_file(p), p.manifest.main.len > 0, false);
     update(test_file(p), p.manifest.test.len > 0, false);
     return note, str("");
 }

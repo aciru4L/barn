@@ -80,6 +80,10 @@ fn valid_root_file(path: const u8[:]) -> bool {
     is_relative_path(path) && ends_with(path, ".goose") && path.len > 6 && find(path, "..") < 0
 }
 
+fn valid_inner_path(path: const u8[:]) -> bool {
+    is_relative_path(path) && find(path, "..") < 0 && !starts_with(path, "./") && !ends_with(path, "/")
+}
+
 
 fn is_folder_path(text: const u8[:]) -> bool { starts_with(text, "./") || starts_with(text, "../") }
 
@@ -92,12 +96,14 @@ struct Override { name: const u8[:], version: Version, path: const u8[:] }
 fn is_local(o: Override) -> bool { o.path.len > 0 }
 
 struct Manifest {
-    egg: Dependency, main: const u8[:], test: const u8[:], first_dependency: i64, dependency_count: i64,
-    first_override: i64, override_count: i64,
+    egg: Dependency, main: const u8[:], test: const u8[:], source: const u8[:], first_dependency: i64,
+    dependency_count: i64, first_override: i64, override_count: i64, first_exclude: i64, exclude_count: i64,
 }
 
 fn dependencies_end(m: Manifest) -> i64 { m.first_dependency + m.dependency_count }
 fn overrides_end(m: Manifest) -> i64 { m.first_override + m.override_count }
+fn excludes_end(m: Manifest) -> i64 { m.first_exclude + m.exclude_count }
+fn source_of(m: Manifest) -> const u8[:] { if m.source.len > 0 { m.source } else { "." } }
 
 fn line_at(text: const u8[:], at: i64) -> i64 {
     var line = 1;
@@ -106,9 +112,10 @@ fn line_at(text: const u8[:], at: i64) -> i64 {
 }
 
 fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: Override[>..]&,
-                  names: u8[>..]&) -> Manifest, u8[>..] {
+                  excludes: (const u8[:])[>..]&, names: u8[>..]&) -> Manifest, u8[>..] {
     var r = json::reader(src);
-    var m = Manifest { first_dependency: dependencies.len, first_override: overrides.len, .. };
+    var m = Manifest { first_dependency: dependencies.len, first_override: overrides.len, first_exclude: excludes.len,
+                       .. };
     var keys: (const u8[:])[>..] = [];
     var given_owner: const u8[:] = names[..0];
     var given_name: const u8[:] = names[..0];
@@ -152,6 +159,31 @@ fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: O
             F(keep(key));
         };
         check_json();
+    }
+
+    fn read_array<F>(k: const u8[:]) {
+        check_json();
+        guard json::peek(r) == '[' else { fail(str(k, " must be an array")); }
+        json::each_element(r) {
+            check_json();
+            at = r.pos;
+            F();
+        };
+        check_json();
+    }
+
+    fn take_source() {
+        let path = read_text("source");
+        guard path == "." || valid_inner_path(path) else { fail(str("bad source '", path, "'")); }
+        m.source = path;
+    }
+
+    fn take_excludes() {
+        read_array("exclude") {
+            let path = read_text("each exclude");
+            guard valid_inner_path(path) else { fail(str("bad exclude '", path, "'")); }
+            excludes.push(path);
+        };
     }
 
     fn read_version(s: const u8[:]) -> Version {
@@ -226,6 +258,10 @@ fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: O
             m.main = read_root_file(k);
         } else if k == "test" {
             m.test = read_root_file(k);
+        } else if k == "source" {
+            take_source();
+        } else if k == "exclude" {
+            take_excludes();
         } else if k == "dependencies" {
             take_dependencies();
         } else if k == "overrides" {
@@ -251,5 +287,6 @@ fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: O
     m.egg.name = names[start..];
     m.dependency_count = dependencies.len - m.first_dependency;
     m.override_count = overrides.len - m.first_override;
+    m.exclude_count = excludes.len - m.first_exclude;
     return m, str("");
 }
