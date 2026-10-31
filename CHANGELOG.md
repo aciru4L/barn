@@ -12,7 +12,9 @@ All notable changes to Barn are recorded here. The format follows
 - `barn.pkg` with dependencies and overrides; `barn.lock` with a SHA-256 fingerprint of each egg.
 - Minimal version selection: each egg gets the newest version asked for, and incompatible
   versions are an error.
-- A local repository with immutable releases and timestamped snapshots.
+- A local eggs folder with immutable releases and timestamped snapshots: `~/.barn/eggs`, or
+  `eggs/` under `BARN_HOME`. The commands that install or lay eggs create it when it is
+  missing.
 - Prebuilt executables for Linux, macOS and Windows on each GitHub release.
 - `barn build` and `barn run`, which stop when `barn.lock` does not match `barn.pkg` or
   `.barn/` does not match `barn.lock`, and otherwise hand the project to `goose build` or

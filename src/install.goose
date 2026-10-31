@@ -3,7 +3,7 @@ import os;
 import src.version;
 import src.manifest;
 import src.project;
-import src.repository;
+import src.eggs;
 import src.resolve;
 import src.files;
 import src.checksum;
@@ -65,11 +65,11 @@ fn is_edited(old: const Locked[:], name: const u8[:], hash: const u8[:]) -> bool
     return i >= 0 && is_hash(old[i].hash) && old[i].hash != hash;
 }
 
-fn laid_sums(repository: const u8[:], coordinate: const u8[:], out: u8[>..]&) {
+fn laid_sums(eggs: const u8[:], coordinate: const u8[:], out: u8[>..]&) {
     let colon = find(coordinate, ":");
     guard colon > 0 else { return; }
     let v, ok = parse_version(coordinate[colon + 1..]);
-    if ok { read_sums(egg_dir(repository, coordinate[..colon], v), out); }
+    if ok { read_sums(egg_dir(eggs, coordinate[..colon], v), out); }
 }
 
 fn import_lines(b: Build, root: const u8[:]) -> u8[>..] {
@@ -119,7 +119,7 @@ fn write_lock(dir: const u8[:], lines: const u8[:]) -> u8[>..] {
     return str("");
 }
 
-fn install_build(p: Project, b: Build, old: const Locked[:], repository: const u8[:], force: bool) -> u8[>..] {
+fn install_build(p: Project, b: Build, old: const Locked[:], eggs: const u8[:], force: bool) -> u8[>..] {
     let barn_dir = str(p.dir, "/.barn");
     var lock_lines: u8[>..] = [];
     var report: u8[>..] = [];
@@ -138,19 +138,19 @@ fn install_build(p: Project, b: Build, old: const Locked[:], repository: const u
         format(report, "\n  ", coordinate, "  (", folder, ")");
     }
 
-    fn check_repository_copy(coordinate: const u8[:], name: const u8[:], from: const u8[:], sums: const u8[:],
+    fn check_laid_copy(coordinate: const u8[:], name: const u8[:], from: const u8[:], sums: const u8[:],
                              hash: const u8[:], copy_sums: const u8[:]) {
         var laid: u8[>..] = [];
         let locked = find_locked(old, name);
-        if !read_sums(from, laid) { format(problems, "\n  ", coordinate, ": no ", SUM_FILE, " in the repository"); }
+        if !read_sums(from, laid) { format(problems, "\n  ", coordinate, ": no ", SUM_FILE, " in the eggs folder"); }
         else if laid != sums {
-            format(problems, "\n  ", coordinate, ": changed in the repository since barn lay:");
+            format(problems, "\n  ", coordinate, ": changed in the eggs folder since barn lay:");
             describe_changes(laid, sums, "", problems);
         } else if !force && locked >= 0 && old[locked].coordinate == coordinate && is_hash(old[locked].hash) &&
                   old[locked].hash != hash {
             var detail: u8[>..] = [];
             describe_changes_since(copy_sums, old[locked].hash, sums, "", detail);
-            format(problems, "\n  ", coordinate, ": the repository copy differs from barn.lock",
+            format(problems, "\n  ", coordinate, ": the copy in the eggs folder differs from barn.lock",
                    if detail.len > 0 { ":" } else { "" }, detail);
             overridable = true;
         }
@@ -160,7 +160,7 @@ fn install_build(p: Project, b: Build, old: const Locked[:], repository: const u
         guard copy_hash.len > 0 && !force && is_edited(old, name, copy_hash) else { return; }
         let locked = old[find_locked(old, name)];
         var was: u8[>..] = [];
-        laid_sums(repository, locked.coordinate, was);
+        laid_sums(eggs, locked.coordinate, was);
         var detail: u8[>..] = [];
         describe_changes_since(was, locked.hash, copy_sums, str(".barn/", name, "/"), detail);
         format(problems, "\n  .barn/", name, " was edited", if detail.len > 0 { ":" } else { "" }, detail);
@@ -169,7 +169,7 @@ fn install_build(p: Project, b: Build, old: const Locked[:], repository: const u
 
     fn plan_laid(node: i64, name: const u8[:], coordinate: const u8[:]) {
         let n = b.nodes[node];
-        let from = egg_dir(repository, n.egg, n.version);
+        let from = egg_dir(eggs, n.egg, n.version);
         var sums: u8[>..] = [];
         file_sums(from, sums);
         let hash = sums_hash(sums);
@@ -177,7 +177,7 @@ fn install_build(p: Project, b: Build, old: const Locked[:], repository: const u
         var copy_sums: u8[>..] = [];
         let has_copy = is_dir(copy) && file_sums(copy, copy_sums);
         let copy_hash: u8[>..] = if has_copy { sums_hash(copy_sums) } else { str("") };
-        check_repository_copy(coordinate, name, from, sums, hash, copy_sums);
+        check_laid_copy(coordinate, name, from, sums, hash, copy_sums);
         format(lock_lines, coordinate, " ", hash, "\n");
         kept.push(name);
         format(report, "\n  ", coordinate);
@@ -221,7 +221,7 @@ fn install_build(p: Project, b: Build, old: const Locked[:], repository: const u
         for node in copies {
             let n = b.nodes[node];
             let to = str(barn_dir, "/", short_name(n.egg));
-            guard delete_tree(to) && copy_tree(egg_dir(repository, n.egg, n.version), to) &&
+            guard delete_tree(to) && copy_tree(egg_dir(eggs, n.egg, n.version), to) &&
                   delete_tree(str(to, "/", SUM_FILE)) else {
                 return str("cannot copy into ", to) from install_build;
             }
@@ -243,18 +243,18 @@ fn install_build(p: Project, b: Build, old: const Locked[:], repository: const u
     return str("");
 }
 
-fn install_project(p: Project, repository: const u8[:], force: bool) -> u8[>..] {
+fn install_project(p: Project, eggs: const u8[:], force: bool) -> u8[>..] {
     var lock_source: u8[>..] = [];
     var old: Locked[>..] = [];
     read_lock(p.dir, lock_source, old);
-    return resolve(p.dir, repository) { return install_build(p, it, old, repository, force); };
+    return resolve(p.dir, eggs) { return install_build(p, it, old, eggs, force); };
 }
 
-fn install(dir: const u8[:], repository: const u8[:], force: bool) -> u8[>..] {
-    return with_project(dir) { return install_project(it, repository, force); };
+fn install(dir: const u8[:], eggs: const u8[:], force: bool) -> u8[>..] {
+    return with_project(dir) { return install_project(it, eggs, force); };
 }
 
-fn check_copies(dir: const u8[:], repository: const u8[:], entries: const Locked[:], problems: u8[>..]&) -> i64 {
+fn check_copies(dir: const u8[:], eggs: const u8[:], entries: const Locked[:], problems: u8[>..]&) -> i64 {
     var count = 0;
     for entry in entries {
         if is_hash(entry.hash) {
@@ -264,7 +264,7 @@ fn check_copies(dir: const u8[:], repository: const u8[:], entries: const Locked
             if !is_dir(copy) || !file_sums(copy, sums) { format(problems, "\n  .barn/", entry.name, " is missing"); }
             else if sums_hash(sums) != entry.hash {
                 var was: u8[>..] = [];
-                laid_sums(repository, entry.coordinate, was);
+                laid_sums(eggs, entry.coordinate, was);
                 var detail: u8[>..] = [];
                 describe_changes_since(was, entry.hash, sums, str(".barn/", entry.name, "/"), detail);
                 let colon = if detail.len > 0 { ":" } else { "" };
@@ -275,12 +275,12 @@ fn check_copies(dir: const u8[:], repository: const u8[:], entries: const Locked
     return count;
 }
 
-fn verify(dir: const u8[:], repository: const u8[:]) -> u8[>..] {
+fn verify(dir: const u8[:], eggs: const u8[:]) -> u8[>..] {
     var lock_source: u8[>..] = [];
     var entries: Locked[>..] = [];
     guard read_lock(dir, lock_source, entries) else { return str("no barn.lock in ", dir); }
     var problems: u8[>..] = [];
-    let count = check_copies(dir, repository, entries, problems);
+    let count = check_copies(dir, eggs, entries, problems);
     guard problems.len == 0 else { return str(".barn/ differs from barn.lock:", problems); }
     print("verified ", count, if count == 1 { " egg" } else { " eggs" });
     return str("");

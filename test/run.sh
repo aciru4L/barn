@@ -20,7 +20,7 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 work_native="$work"
 command -v cygpath > /dev/null && work_native="$(cygpath -m "$work")"
-fixtures="$root/test/repository"
+fixtures="$root/test/home"
 version="$(sed -n 's/^let VERSION = "\(.*\)";$/\1/p' "$root/barn.goose")"
 
 barn() { "$executable" "$@"; }
@@ -68,8 +68,7 @@ write_pkg() {
 }
 
 scenario() {
-    export BARN_REPO="$work/repo" BARN_OWNER=acme
-    unset BARN_HOME
+    export BARN_HOME="$work/home" BARN_OWNER=acme
     enter "$work"
 
     section "hatch and lay"
@@ -118,7 +117,7 @@ scenario() {
     printf 'import os;\nfn main() {\n    for a in args()[1..] { print(a); }\n    exit(3);\n}\n' > main.goose
     write_pkg ''
     without_goose_progress barn run -- one "two words" -- --repo
-    without_goose_progress barn run . --repo "$BARN_REPO"
+    without_goose_progress barn run .
     write_pkg $'dependencies = ["acme/numbers:0.2.0"];\n'
     run barn run
     enter ../app
@@ -157,10 +156,10 @@ scenario() {
     run barn install --force
     run barn verify
 
-    section "repository changed"
-    printf '// changed\n' >> "$BARN_REPO/acme/numbers/0.2.0/numbers.goose"
+    section "eggs folder changed"
+    printf '// changed\n' >> "$BARN_HOME/eggs/acme/numbers/0.2.0/numbers.goose"
     run barn install
-    (cd "$BARN_REPO/acme/numbers/0.2.0" && sha256sum barn.pkg numbers.goose | sed 's/ [*]/  /' > barn.sha256)
+    (cd "$BARN_HOME/eggs/acme/numbers/0.2.0" && sha256sum barn.pkg numbers.goose | sed 's/ [*]/  /' > barn.sha256)
     run barn install
     run barn install --force
     run barn verify
@@ -240,45 +239,45 @@ scenario() {
     enter ..
 
     section "resolution"
-    run barn inspect "$fixtures/../app" --repo "$fixtures"
-    run barn resolve "$fixtures/../app" --repo "$fixtures"
+    BARN_HOME="$fixtures" run barn inspect "$root/test/app"
+    BARN_HOME="$fixtures" run barn resolve "$root/test/app"
     mkdir resolution
     enter resolution
     write_pkg $'dependencies = ["example/auth:1.0.0", "example/json:0.6.0", "a/b:1.0.0"];\n'
-    run barn inspect --repo "$fixtures"
+    BARN_HOME="$fixtures" run barn inspect
     write_pkg $'dependencies = ["example/auth:1.0.0", "example/json:0.6.0"];\noverrides = ["example/json:0.6.0"];\n'
-    run barn inspect --repo "$fixtures"
+    BARN_HOME="$fixtures" run barn inspect
     write_pkg $'dependencies = ["example/json:0.5.0"];\noverrides = ["acme/net:0.3.0"];\n'
-    run barn resolve --repo "$fixtures"
+    BARN_HOME="$fixtures" run barn resolve
     write_pkg $'dependencies = ["acme/net:0.3.0_snapshot"];\n'
-    run barn resolve --repo "$fixtures"
+    BARN_HOME="$fixtures" run barn resolve
     enter ..
 
     section "barn.pkg errors"
     mkdir errors
     enter errors
     write_pkg $'dependencies = [\n];\n\ndependencyManagement = [\n];\n'
-    run barn resolve --repo "$fixtures"
+    BARN_HOME="$fixtures" run barn resolve
     write_pkg $'dependencyManagement = ["example/json:0.4.0->0.5.0"];\n'
-    run barn resolve --repo "$fixtures"
+    BARN_HOME="$fixtures" run barn resolve
     write_pkg $'local = ["a/b=../b"];\n'
-    run barn resolve --repo "$fixtures"
+    BARN_HOME="$fixtures" run barn resolve
     write_pkg $'dependencies = ["example/json"];\n'
-    run barn resolve --repo "$fixtures"
+    BARN_HOME="$fixtures" run barn resolve
     write_pkg $'dependencies = ["example/json:0.4.0->0.5.0"];\n'
-    run barn resolve --repo "$fixtures"
+    BARN_HOME="$fixtures" run barn resolve
     write_pkg $'dependencies = ["example/json:0.4"];\n'
-    run barn resolve --repo "$fixtures"
+    BARN_HOME="$fixtures" run barn resolve
     write_pkg $'dependencies = ["example/json:0.5.0", "example/json:0.5.0"];\n'
-    run barn resolve --repo "$fixtures"
+    BARN_HOME="$fixtures" run barn resolve
     write_pkg $'version = "0.2.0";\n'
-    run barn resolve --repo "$fixtures"
+    BARN_HOME="$fixtures" run barn resolve
     write_pkg $'test = "../outside.goose";\n'
-    run barn resolve --repo "$fixtures"
+    BARN_HOME="$fixtures" run barn resolve
     write_pkg $'test = "a.goose";\ntest = "b.goose";\n'
-    run barn resolve --repo "$fixtures"
+    BARN_HOME="$fixtures" run barn resolve
     write_pkg $'colour = "red";\n'
-    run barn resolve --repo "$fixtures"
+    BARN_HOME="$fixtures" run barn resolve
     enter ..
 
     section "usage"
@@ -293,6 +292,19 @@ scenario() {
     run barn help test
     run barn help frob
     run barn version
+
+    section "eggs folder"
+    silently barn hatch plain
+    export BARN_HOME="$work/other-home"
+    run barn resolve plain
+    run test -d "$BARN_HOME/eggs"
+    run barn install plain
+    run ls "$BARN_HOME"
+    run barn install plain
+    unset BARN_HOME
+    export HOME="$work/user" USERPROFILE="$work_native/user"
+    run barn lay plain
+    run ls "$HOME/.barn"
 }
 
 normalize() {

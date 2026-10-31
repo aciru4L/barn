@@ -30,7 +30,7 @@ fn describe_stale_lock(b: Build, entries: const Locked[:], out: u8[>..]&) {
     };
 }
 
-fn check_build(p: Project, b: Build, repository: const u8[:]) -> u8[>..] {
+fn check_build(p: Project, b: Build, eggs: const u8[:]) -> u8[>..] {
     var lock_source: u8[>..] = [];
     var entries: Locked[>..] = [];
     let has_lock = read_lock(p.dir, lock_source, entries);
@@ -39,7 +39,7 @@ fn check_build(p: Project, b: Build, repository: const u8[:]) -> u8[>..] {
     describe_stale_lock(b, entries, stale);
     guard stale.len == 0 else { return str("barn.lock does not match barn.pkg:", stale, "\nbarn install updates it"); }
     var edited: u8[>..] = [];
-    check_copies(p.dir, repository, entries, edited);
+    check_copies(p.dir, eggs, entries, edited);
     guard edited.len == 0 else {
         return str(".barn/ differs from barn.lock:", edited, "\nbarn install --force restores it");
     }
@@ -54,13 +54,13 @@ fn goose_arguments(command: const u8[:], root: const u8[:], passed: const u8[:][
     return arguments;
 }
 
-fn run_goose(command: const u8[:], dir: const u8[:], repository: const u8[:], passed: const u8[:][:]) -> u8[>..] {
+fn run_goose(command: const u8[:], dir: const u8[:], eggs: const u8[:], passed: const u8[:][:]) -> u8[>..] {
     return with_project(dir) { p =>
         let file = if command == "test" { test_file(p) } else { main_file(p) };
         let root: u8[>..] = if dir == "." { str(file) } else { str(dir, "/", file) };
         guard command != "test" || file_exists(root) else { return str("no ", root); }
-        return resolve(dir, repository) { b =>
-            let problem = check_build(p, b, repository);
+        return resolve(dir, eggs) { b =>
+            let problem = check_build(p, b, eggs);
             guard problem.len == 0 else { return problem; }
             let status = run_program(goose_arguments(command, root, passed)[..]);
             guard status >= 0 else { return str("cannot start goose"); }

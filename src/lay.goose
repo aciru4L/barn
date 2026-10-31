@@ -3,7 +3,7 @@ import os;
 import src.version;
 import src.manifest;
 import src.project;
-import src.repository;
+import src.eggs;
 import src.checksum;
 import src.files;
 
@@ -47,7 +47,7 @@ fn move_release_files(claim: const u8[:], base: const u8[:]) -> bool {
     return moved && rename_file(str(claim, "/", SUM_FILE), str(base, "/", SUM_FILE));
 }
 
-fn release_staged(p: Project, repository: const u8[:], stage: const u8[:], base: const u8[:]) -> u8[>..] {
+fn release_staged(p: Project, eggs: const u8[:], stage: const u8[:], base: const u8[:]) -> u8[>..] {
     let egg = p.manifest.egg;
     let claim = str(base, "/.releasing");
     guard rename_file(stage, claim) else {
@@ -55,7 +55,7 @@ fn release_staged(p: Project, repository: const u8[:], stage: const u8[:], base:
         return str("another barn lay --release of ", egg, " is under way, or one stopped midway: ",
                    "if none is running, delete ", claim);
     }
-    guard !is_sealed(repository, egg.name, egg.version) else {
+    guard !is_sealed(eggs, egg.name, egg.version) else {
         delete_tree(claim);
         return str(egg, " is already released");
     }
@@ -65,42 +65,42 @@ fn release_staged(p: Project, repository: const u8[:], stage: const u8[:], base:
     return str("");
 }
 
-fn snapshot_staged(p: Project, repository: const u8[:], stage: const u8[:]) -> u8[>..], Version {
+fn snapshot_staged(p: Project, eggs: const u8[:], stage: const u8[:]) -> u8[>..], Version {
     var snapshot = p.manifest.egg.version;
     snapshot.snapshot = utc_stamp(time_ns());
-    guard rename_file(stage, egg_dir(repository, p.manifest.egg.name, snapshot)) else {
+    guard rename_file(stage, egg_dir(eggs, p.manifest.egg.name, snapshot)) else {
         delete_tree(stage);
         return str(p.manifest.egg.name, ":", snapshot, " already exists: lay again"), snapshot;
     }
     return str(""), snapshot;
 }
 
-fn lay_project(p: Project, repository: const u8[:], release: bool) -> u8[>..] {
+fn lay_project(p: Project, eggs: const u8[:], release: bool) -> u8[>..] {
     let invalid = check_layable(p);
     guard invalid.len == 0 else { return invalid; }
-    return lay_checked(p, repository, release);
+    return lay_checked(p, eggs, release);
 }
 
-fn lay_checked(p: Project, repository: const u8[:], release: bool) -> u8[>..] {
+fn lay_checked(p: Project, eggs: const u8[:], release: bool) -> u8[>..] {
     let egg = p.manifest.egg;
-    guard !release || !is_sealed(repository, egg.name, egg.version) else { return str(egg, " is already released"); }
-    let base = egg_dir(repository, egg.name, egg.version);
+    guard !release || !is_sealed(eggs, egg.name, egg.version) else { return str(egg, " is already released"); }
+    let base = egg_dir(eggs, egg.name, egg.version);
     guard make_dirs(base) else { return str("cannot create ", base); }
     let stage = str(base, "/.laying-", time_ns(), "-", random_seed());
     var sums: u8[>..] = [];
     guard stage_egg(p, stage, sums) else { return str("cannot copy the egg into ", stage); }
     guard !release else {
-        let failed = release_staged(p, repository, stage, base);
+        let failed = release_staged(p, eggs, stage, base);
         guard failed.len == 0 else { return failed; }
         print("released ", egg, "  ", sums_hash(sums));
         return str("");
     }
-    let failed, snapshot = snapshot_staged(p, repository, stage);
+    let failed, snapshot = snapshot_staged(p, eggs, stage);
     guard failed.len == 0 else { return failed; }
     print("laid ", egg.name, ":", snapshot, "  ", sums_hash(sums));
     return str("");
 }
 
-fn lay(dir: const u8[:], repository: const u8[:], release: bool) -> u8[>..] {
-    return with_project(dir) { return lay_project(it, repository, release); };
+fn lay(dir: const u8[:], eggs: const u8[:], release: bool) -> u8[>..] {
+    return with_project(dir) { return lay_project(it, eggs, release); };
 }

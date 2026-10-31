@@ -19,7 +19,7 @@ A package manager for [Goose](https://github.com/aardappel/goose). Packages are
 | ✅ | `barn verify` checks `.barn/` against the lock and catches edited eggs |
 | ✅ | `barn build`, `barn run` and `barn test` refuse a stale lock or edited eggs before handing off to Goose |
 | ✅ | Overrides: pin an egg's version, or point it at a local folder |
-| ✅ | Local repository with immutable releases and timestamped snapshots |
+| ✅ | Local eggs folder with immutable releases and timestamped snapshots |
 | ✅ | Dependency tree and flat listing with `barn inspect` and `barn resolve` |
 | ✅ | Prebuilt executables for Linux, macOS and Windows |
 | ❌ | Remote / hosted registry |
@@ -45,7 +45,7 @@ export BARN_OWNER=acme
 
 barn hatch numbers               # a new egg in ./numbers
 cd numbers
-barn lay --release               # put numbers 0.1.0 into the local repository
+barn lay --release               # put numbers 0.1.0 into ~/.barn/eggs
 cd ..
 
 barn hatch app                   # a project that uses it
@@ -80,7 +80,7 @@ dependencies = [
 | `barn build [-- options...]` | check the eggs, then `goose build` the project |
 | `barn run [-- arguments...]` | check the eggs, then `goose run` the project |
 | `barn test [-- arguments...]` | check the eggs, then `goose run` the project's tests |
-| `barn lay` | put the egg into the repository |
+| `barn lay` | put the egg into `~/.barn/eggs` |
 | `barn inspect` | show the dependency tree |
 | `barn resolve` | list the eggs the project uses |
 
@@ -93,7 +93,11 @@ program. Running `goose` directly skips these checks.
 writes next to `main.goose`. It imports the egg from `../src`, and a test fails by exiting
 with a status other than 0. `test = "path.goose";` in `barn.pkg` runs another file, as
 `main = "path.goose";` does for `barn run`. The tests stay out of the egg, since `barn lay`
-only puts `src/` into the repository.
+only puts `src/` into `~/.barn/eggs`.
+
+Barn keeps its eggs in `~/.barn/eggs`, or in `eggs/` under `BARN_HOME` when that is set.
+`install`, `add`, `remove`, `upgrade` and `lay` create the folder when it is missing; the
+other commands only read it.
 
 `barn help <command>` shows a command's options.
 
