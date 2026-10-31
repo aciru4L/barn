@@ -10,7 +10,7 @@ struct Project {
     overrides: const Override[:],
 }
 
-fn package_path(dir: const u8[:]) -> u8[>..] { str(dir, "/barn.pkg") }
+fn package_path(dir: const u8[:]) -> u8[>..] { str(dir, "/barn.json") }
 
 fn main_file(p: Project) -> const u8[:] {
     if p.manifest.main.len > 0 { return p.manifest.main; }
@@ -41,6 +41,6 @@ fn with_project_text<F>(dir: const u8[:], text: const u8[:]) -> u8[>..] {
 
 fn with_project<F>(dir: const u8[:]) -> u8[>..] {
     var text: u8[>..] = [];
-    guard read_file(package_path(dir), text) else { return str("no barn.pkg in ", dir); }
+    guard read_file(package_path(dir), text) else { return str("no barn.json in ", dir); }
     return with_project_text(dir, text) { F(it); };
 }

@@ -64,7 +64,9 @@ enter() {
 }
 
 write_pkg() {
-    printf 'owner = "acme";\nname = "app";\nversion = "0.1.0";\n%s' "$1" > barn.pkg
+    local more=""
+    [ -n "$1" ] && more=$',\n  '"$1"
+    printf '{\n  "owner": "acme",\n  "name": "app",\n  "version": "0.1.0"%s\n}\n' "$more" > barn.json
 }
 
 scenario() {
@@ -73,15 +75,15 @@ scenario() {
 
     section "hatch and lay"
     run barn hatch numbers
-    show numbers/barn.pkg numbers/src/numbers.goose numbers/main.goose numbers/test/main_test.goose numbers/.gitignore
+    show numbers/barn.json numbers/src/numbers.goose numbers/main.goose numbers/test/main_test.goose numbers/.gitignore
     run barn hatch numbers
     run barn hatch Bad-Name
     enter numbers
     run barn lay --release
     run barn lay --release
-    sed -i 's/0.1.0/0.1.1/' barn.pkg
+    sed -i 's/0.1.0/0.1.1/' barn.json
     run barn lay --release
-    sed -i 's/0.1.1/0.2.0/' barn.pkg
+    sed -i 's/0.1.1/0.2.0/' barn.json
     run barn lay --release
     run barn lay
     run barn lay
@@ -92,7 +94,7 @@ scenario() {
     run barn hatch app
     enter app
     run barn add acme/numbers:0.1.0
-    show barn.pkg barn.lock main.goose test/main_test.goose
+    show barn.json barn.lock main.goose test/main_test.goose
     run barn upgrade
     run barn add acme/numbers
     run barn add acme/numbers:0.2.0
@@ -109,10 +111,10 @@ scenario() {
     without_goose_progress barn run
     silently barn build -- -o "$work/app-executable"
     run "$work/app-executable"
-    sed -i 's/numbers:0.2.0/numbers:0.1.1/' barn.pkg
+    sed -i 's/"0.2.0"/"0.1.1"/' barn.json
     run barn run
     run barn build
-    sed -i 's/numbers:0.1.1/numbers:0.2.0/' barn.pkg
+    sed -i 's/"0.1.1"/"0.2.0"/' barn.json
     run barn run --bogus
     mkdir ../arguments
     enter ../arguments
@@ -120,7 +122,7 @@ scenario() {
     write_pkg ''
     without_goose_progress barn run -- one "two words" -- --repo
     without_goose_progress barn run .
-    write_pkg $'dependencies = ["acme/numbers:0.2.0"];\n'
+    write_pkg '"dependencies": {"acme/numbers": "0.2.0"}'
     run barn run
     enter ../app
 
@@ -129,9 +131,9 @@ scenario() {
     sed -i 's/"honk from app"/"honk from the app"/' test/main_test.goose
     without_goose_progress barn test
     sed -i 's/"honk from the app"/"honk from app"/' test/main_test.goose
-    sed -i 's/numbers:0.2.0/numbers:0.1.1/' barn.pkg
+    sed -i 's/"0.2.0"/"0.1.1"/' barn.json
     run barn test
-    sed -i 's/numbers:0.1.1/numbers:0.2.0/' barn.pkg
+    sed -i 's/"0.1.1"/"0.2.0"/' barn.json
     mv test/main_test.goose test/kept.goose
     run barn test
     mv test/kept.goose test/main_test.goose
@@ -139,11 +141,11 @@ scenario() {
     enter ../checks
     mkdir checks
     printf 'import os;\nfn main() {\n    for a in args()[1..] { print(a); }\n    print(numbers::honk());\n}\n' > checks/all.goose
-    write_pkg $'test = "checks/all.goose";\ndependencies = ["acme/numbers:0.2.0"];\n'
+    write_pkg $'"test": "checks/all.goose",\n  "dependencies": {"acme/numbers": "0.2.0"}'
     run barn install
     show checks/all.goose
     without_goose_progress barn test -- one "two words"
-    write_pkg $'test = "checks/missing.goose";\n'
+    write_pkg '"test": "checks/missing.goose"'
     run barn install
     run barn test
     enter ../app
@@ -161,14 +163,14 @@ scenario() {
     section "eggs folder changed"
     printf '// changed\n' >> "$BARN_HOME/eggs/acme/numbers/0.2.0/numbers.goose"
     run barn install
-    (cd "$BARN_HOME/eggs/acme/numbers/0.2.0" && sha256sum barn.pkg numbers.goose | sed 's/ [*]/  /' > barn.sha256)
+    (cd "$BARN_HOME/eggs/acme/numbers/0.2.0" && sha256sum barn.json numbers.goose | sed 's/ [*]/  /' > barn.sha256)
     run barn install
     run barn install --force
     run barn verify
 
     section "remove"
     run barn remove numbers
-    show barn.pkg main.goose test/main_test.goose barn.lock
+    show barn.json main.goose test/main_test.goose barn.lock
     run barn remove numbers
     enter ..
 
@@ -183,47 +185,44 @@ scenario() {
     run barn remove stats
     enter ..
 
-    section "barn.pkg layouts"
+    section "barn.json rewrites"
     mkdir layouts
     enter layouts
     printf 'import src.app;\nfn main() {}\n' > main.goose
-    write_pkg $'\ndependencies = [\n    "acme/numbers:0.1.0",   // the maths\n    "acme/stats:0.1.0"\n];\n\n// after\n'
+    printf '{"owner": "acme", "name": "app", "version": "0.1.0", "main": "main.goose",\n' > barn.json
+    printf ' "dependencies": {"acme/numbers": "0.1.0", "acme/stats": "0.1.0"}}\n' >> barn.json
     run barn add acme/numbers:0.1.1
     run barn remove stats
-    show barn.pkg
-    write_pkg $'dependencies = [\n  "acme/numbers:0.1.0"  // two spaces\n];\n'
-    run barn add acme/stats
-    show barn.pkg
+    show barn.json
     write_pkg ''
-    run barn add acme/stats
-    show barn.pkg
-    write_pkg $'dependencies = [];\n'
     run barn add acme/stats acme/numbers:0.1.1
-    show barn.pkg
-    run barn remove stats
-    show barn.pkg
+    show barn.json
+    run barn remove stats numbers
+    show barn.json
     enter ..
 
     section "local override"
     mkdir local
     enter local
     printf 'fn main() {}\n' > main.goose
-    write_pkg $'dependencies = ["acme/numbers:0.1.0"];\noverrides = ["acme/numbers=../numbers"];\n'
+    write_pkg $'"dependencies": {"acme/numbers": "0.1.0"},\n  "overrides": {"acme/numbers": "../numbers"}'
     run barn install
     run barn inspect
     show main.goose barn.lock
     run barn verify
     without_goose_progress barn run
+    run barn add acme/stats
+    show barn.json
     enter ..
 
     section "uppercase"
     BARN_OWNER=Acme run barn hatch loud
     run barn hatch shouty --owner ACME
-    show loud/barn.pkg shouty/barn.pkg
+    show loud/barn.json shouty/barn.json
     mkdir uppercase
     enter uppercase
     printf 'fn main() {}\n' > main.goose
-    write_pkg $'dependencies = ["Acme/numbers:0.1.0"];\noverrides = ["ACME/numbers:0.1.1"];\n'
+    write_pkg $'"dependencies": {"Acme/numbers": "0.1.0"},\n  "overrides": {"ACME/numbers": "0.1.1"}'
     run barn install
     show barn.lock
     run barn add ACME/stats
@@ -231,12 +230,12 @@ scenario() {
     run barn upgrade numbers
     run barn upgrade Numbers
     run barn remove ACME/stats
-    show barn.pkg
-    write_pkg $'dependencies = ["acme/numbers:0.1.0", "Acme/numbers:0.1.0"];\n'
+    show barn.json
+    write_pkg '"dependencies": {"acme/numbers": "0.1.0", "Acme/numbers": "0.1.0"}'
     run barn resolve
-    write_pkg $'dependencies = ["acme/Numbers:0.1.0"];\n'
+    write_pkg '"dependencies": {"acme/Numbers": "0.1.0"}'
     run barn resolve
-    printf 'owner = "Acme";\nname = "app";\nversion = "0.1.0";\n' > barn.pkg
+    printf '{"owner": "Acme", "name": "app", "version": "0.1.0"}\n' > barn.json
     run barn resolve
     enter ..
 
@@ -245,42 +244,51 @@ scenario() {
     BARN_HOME="$fixtures" run barn resolve "$root/test/app"
     mkdir resolution
     enter resolution
-    write_pkg $'dependencies = ["example/auth:1.0.0", "example/json:0.6.0", "a/b:1.0.0"];\n'
+    write_pkg '"dependencies": {"example/auth": "1.0.0", "example/json": "0.6.0", "a/b": "1.0.0"}'
     BARN_HOME="$fixtures" run barn inspect
-    write_pkg $'dependencies = ["example/auth:1.0.0", "example/json:0.6.0"];\noverrides = ["example/json:0.6.0"];\n'
+    write_pkg $'"dependencies": {"example/auth": "1.0.0", "example/json": "0.6.0"},\n'\
+'  "overrides": {"example/json": "0.6.0"}'
     BARN_HOME="$fixtures" run barn inspect
-    write_pkg $'dependencies = ["example/json:0.5.0"];\noverrides = ["acme/net:0.3.0"];\n'
+    write_pkg $'"dependencies": {"example/json": "0.5.0"},\n  "overrides": {"acme/net": "0.3.0"}'
     BARN_HOME="$fixtures" run barn resolve
-    write_pkg $'dependencies = ["acme/net:0.3.0_snapshot"];\n'
+    write_pkg '"dependencies": {"acme/net": "0.3.0_snapshot"}'
     BARN_HOME="$fixtures" run barn resolve
     enter ..
 
-    section "barn.pkg errors"
+    section "barn.json errors"
     mkdir errors
     enter errors
-    write_pkg $'dependencies = [\n];\n\ndependencyManagement = [\n];\n'
+    write_pkg '"dependencies": {}'
     BARN_HOME="$fixtures" run barn resolve
-    write_pkg $'dependencyManagement = ["example/json:0.4.0->0.5.0"];\n'
+    write_pkg '"dependencies": ["example/json:0.5.0"]'
     BARN_HOME="$fixtures" run barn resolve
-    write_pkg $'local = ["a/b=../b"];\n'
+    write_pkg '"dependencies": {"example/json": 5}'
     BARN_HOME="$fixtures" run barn resolve
-    write_pkg $'dependencies = ["example/json"];\n'
+    write_pkg '"dependencies": {"example/json": "0.4.0->0.5.0"}'
     BARN_HOME="$fixtures" run barn resolve
-    write_pkg $'dependencies = ["example/json:0.4.0->0.5.0"];\n'
+    write_pkg '"dependencies": {"example/json": "0.4"}'
     BARN_HOME="$fixtures" run barn resolve
-    write_pkg $'dependencies = ["example/json:0.4"];\n'
+    write_pkg '"dependencies": {"example/json": "0.5.0_snapshot_20260101T000000Z"}'
     BARN_HOME="$fixtures" run barn resolve
-    write_pkg $'dependencies = ["example/json:0.5.0_snapshot_20260101T000000Z"];\n'
+    write_pkg '"dependencies": {"example/json": "0.5.0", "example/json": "0.5.0"}'
     BARN_HOME="$fixtures" run barn resolve
-    write_pkg $'dependencies = ["example/json:0.5.0", "example/json:0.5.0"];\n'
+    write_pkg '"dependencies": {"json": "0.5.0"}'
     BARN_HOME="$fixtures" run barn resolve
-    write_pkg $'version = "0.2.0";\n'
+    write_pkg '"overrides": {"example/json": "/elsewhere"}'
     BARN_HOME="$fixtures" run barn resolve
-    write_pkg $'test = "../outside.goose";\n'
+    write_pkg '"version": "0.2.0"'
     BARN_HOME="$fixtures" run barn resolve
-    write_pkg $'test = "a.goose";\ntest = "b.goose";\n'
+    write_pkg '"test": "../outside.goose"'
     BARN_HOME="$fixtures" run barn resolve
-    write_pkg $'colour = "red";\n'
+    write_pkg '"colour": "red"'
+    BARN_HOME="$fixtures" run barn resolve
+    write_pkg $'"dependencies": {"example/json": "0.5.0",}'
+    BARN_HOME="$fixtures" run barn resolve
+    write_pkg $'// a comment\n  "dependencies": {}'
+    BARN_HOME="$fixtures" run barn resolve
+    printf '{"name": "app", "version": "0.1.0"}\n' > barn.json
+    BARN_HOME="$fixtures" run barn resolve
+    printf '[]\n' > barn.json
     BARN_HOME="$fixtures" run barn resolve
     enter ..
 

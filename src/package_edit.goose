@@ -1,83 +1,77 @@
 import std;
+import json;
+import src.version;
 import src.manifest;
 import src.project;
 
-fn is_blank(c: u8) -> bool { c == ' ' || c == '\t' || c == '\r' }
-
-fn line_start(text: const u8[:], at: i64) -> i64 {
-    var start = at;
-    while start > 0 && text[start - 1] != '\n' { start--; }
-    return start;
+fn format_field(out: u8[>..]&, key: const u8[:], value: const u8[:]) {
+    out.append("  ");
+    json::format_key(out, key);
+    out.push(' ');
+    json::format_string(out, value);
+    out.append(",\n");
 }
 
-fn line_end(text: const u8[:], at: i64) -> i64 {
-    var end = at;
-    while end < text.len && text[end] != '\n' { end++; }
-    return end;
+fn format_entry(out: u8[>..]&, key: const u8[:], value: const u8[:], is_last: bool) {
+    out.append("    ");
+    json::format_key(out, key);
+    out.push(' ');
+    json::format_string(out, value);
+    out.append(if is_last { "\n" } else { ",\n" });
 }
 
-fn skip_blanks(text: const u8[:], at: i64) -> i64 {
-    var i = at;
-    while i < text.len && is_blank(text[i]) { i++; }
-    return i;
+fn format_dependencies(out: u8[>..]&, dependencies: const Dependency[:]) {
+    guard dependencies.len > 0 else { out.append("  \"dependencies\": {}"); return; }
+    out.append("  \"dependencies\": {\n");
+    for d, i in dependencies { format_entry(out, d.name, str(d.version), i == dependencies.len - 1); }
+    out.append("  }");
 }
 
-fn all_blank(text: const u8[:]) -> bool {
-    for c in text { if !is_blank(c) { return false; } }
-    return true;
-}
-
-fn leading_blanks(text: const u8[:], at: i64) -> u8[>..] {
-    var blanks: u8[>..] = [];
-    for c in text[line_start(text, at)..at] { if is_blank(c) { blanks.push(c); } }
-    return blanks;
-}
-
-fn replace_dependency(p: Project, d: Dependency, entry: const u8[:]) -> u8[>..] {
-    str(p.text[..d.at], entry, p.text[d.end..])
-}
-
-fn append_dependency_list(text: const u8[:], entry: const u8[:]) -> u8[>..] {
-    let newline = if text.len > 0 && text[text.len - 1] != '\n' { "\n" } else { "" };
-    return str(text, newline, "\ndependencies = [\n    \"", entry, "\",\n];\n");
-}
-
-fn insert_dependency(p: Project, entry: const u8[:]) -> u8[>..] {
-    let text = p.text;
-    let m = p.manifest;
-    guard m.dependencies_open >= 0 else { return append_dependency_list(text, entry); }
-    let close_line = line_start(text, m.dependencies_close);
-    let one_per_line = all_blank(text[close_line..m.dependencies_close]) &&
-                       find(text[m.dependencies_open..m.dependencies_close], "\n") >= 0;
-    guard p.dependencies.len > 0 else {
-        if one_per_line { return str(text[..close_line], "    \"", entry, "\",\n", text[close_line..]); }
-        return str(text[..m.dependencies_open + 1], "\"", entry, "\"", text[m.dependencies_open + 1..]);
+fn format_overrides(out: u8[>..]&, overrides: const Override[:]) {
+    guard overrides.len > 0 else { return; }
+    out.append(",\n  \"overrides\": {\n");
+    for o, i in overrides {
+        let value: u8[>..] = if is_local(o) { str(o.path) } else { str(o.version) };
+        format_entry(out, o.name, value, i == overrides.len - 1);
     }
-    let last = p.dependencies[p.dependencies.len - 1];
-    let after_last = last.end + 1;
-    guard one_per_line else { return str(text[..after_last], ", \"", entry, "\"", text[after_last..]); }
-    let next = skip_blanks(text, after_last);
-    let comma = if next < text.len && text[next] == ',' { "" } else { "," };
-    let indent = leading_blanks(text, last.at - 1);
-    let new_line = str(indent, "\"", entry, "\",\n");
-    return str(text[..after_last], comma, text[after_last..close_line], new_line, text[close_line..]);
+    out.append("  }");
+}
+
+fn package_text(m: Manifest, dependencies: const Dependency[:], overrides: const Override[:]) -> u8[>..] {
+    let slash = find(m.egg.name, "/");
+    var out = str("{\n");
+    format_field(out, "owner", m.egg.name[..slash]);
+    format_field(out, "name", m.egg.name[slash + 1..]);
+    format_field(out, "version", str(m.egg.version));
+    if m.main.len > 0 { format_field(out, "main", m.main); }
+    if m.test.len > 0 { format_field(out, "test", m.test); }
+    format_dependencies(out, dependencies);
+    format_overrides(out, overrides);
+    out.append("\n}\n");
+    return out;
+}
+
+fn with_dependencies(p: Project, dependencies: const Dependency[:]) -> u8[>..] {
+    package_text(p.manifest, dependencies, p.overrides)
+}
+
+fn replace_dependency(p: Project, d: Dependency, v: Version) -> u8[>..] {
+    var dependencies: Dependency[>..] = [];
+    for e in p.dependencies {
+        dependencies.push(if e.name == d.name { Dependency { name: e.name, version: v } } else { e });
+    }
+    return with_dependencies(p, dependencies[..]);
+}
+
+fn insert_dependency(p: Project, d: Dependency) -> u8[>..] {
+    var dependencies: Dependency[>..] = [];
+    for e in p.dependencies { dependencies.push(e); }
+    dependencies.push(d);
+    return with_dependencies(p, dependencies[..]);
 }
 
 fn remove_dependency(p: Project, d: Dependency) -> u8[>..] {
-    let text = p.text;
-    let open_quote = d.at - 1;
-    let after_quote = d.end + 1;
-    let start = line_start(text, open_quote);
-    let end = line_end(text, after_quote);
-    var rest = trim(text[after_quote..end]);
-    if starts_with(rest, ",") { rest = trim(rest[1..]); }
-    if all_blank(text[start..open_quote]) && (rest.len == 0 || starts_with(rest, "//")) {
-        return str(text[..start], text[if end < text.len { end + 1 } else { end }..]);
-    }
-    let next = skip_blanks(text, after_quote);
-    if next < text.len && text[next] == ',' { return str(text[..open_quote], text[skip_blanks(text, next + 1)..]); }
-    var before = open_quote;
-    while before > 0 && is_blank(text[before - 1]) { before--; }
-    if before > 0 && text[before - 1] == ',' { before--; }
-    return str(text[..before], text[after_quote..]);
+    var dependencies: Dependency[>..] = [];
+    for e in p.dependencies { if e.name != d.name { dependencies.push(e); } }
+    return with_dependencies(p, dependencies[..]);
 }
