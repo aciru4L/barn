@@ -75,7 +75,7 @@ fn is_relative_path(path: const u8[:]) -> bool {
     path.len > 0 && path[0] != '/' && find(path, "\\") < 0 && find(path, ":") < 0 && find(path, "\"") < 0
 }
 
-fn valid_main(path: const u8[:]) -> bool {
+fn valid_root_file(path: const u8[:]) -> bool {
     is_relative_path(path) && ends_with(path, ".goose") && path.len > 6 && find(path, "..") < 0
 }
 
@@ -88,8 +88,8 @@ struct Override { name: const u8[:], version: Version, path: const u8[:] }
 fn is_local(o: Override) -> bool { o.path.len > 0 }
 
 struct Manifest {
-    egg: Dependency, main: const u8[:], first_dependency: i64, dependency_count: i64, first_override: i64,
-    override_count: i64, dependencies_open: i64 = -1, dependencies_close: i64 = -1,
+    egg: Dependency, main: const u8[:], test: const u8[:], first_dependency: i64, dependency_count: i64,
+    first_override: i64, override_count: i64, dependencies_open: i64 = -1, dependencies_close: i64 = -1,
 }
 
 fn dependencies_end(m: Manifest) -> i64 { m.first_dependency + m.dependency_count }
@@ -204,6 +204,13 @@ fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: O
         span[1] = string_end;
     }
 
+    fn take_root_file(k: const u8[:], taken: const u8[:]) -> const u8[:] {
+        guard taken.len == 0 else { fail(str(k, " is given twice")); }
+        let path = string();
+        guard valid_root_file(path) else { fail(str("bad ", k, " '", path, "'")); }
+        return path;
+    }
+
     fn take_dependencies() {
         guard m.dependencies_open < 0 else { fail("dependencies is given twice"); }
         skip_space();
@@ -250,10 +257,9 @@ fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: O
             m.egg.version = version(src[version_span[0]..version_span[1]]);
             guard is_release(m.egg.version) else { fail("version must be x.y.z"); }
         } else if k == "main" {
-            guard m.main.len == 0 else { fail("main is given twice"); }
-            let path = string();
-            guard valid_main(path) else { fail(str("bad main '", path, "'")); }
-            m.main = path;
+            m.main = take_root_file(k, m.main);
+        } else if k == "test" {
+            m.test = take_root_file(k, m.test);
         } else if k == "dependencies" {
             take_dependencies();
         } else if k == "overrides" {

@@ -12,12 +12,12 @@ A package manager for [Goose](https://github.com/aardappel/goose). Packages are
 |:-:|---|
 | ✅ | Create projects with `barn hatch` |
 | ✅ | Add, remove and upgrade dependencies |
-| ✅ | Install eggs into `.barn/` and update the imports in `main.goose` automatically |
+| ✅ | Install eggs into `.barn/` and update the imports in `main.goose` and `test/main_test.goose` automatically |
 | ✅ | Minimal version selection |
 | ✅ | Errors on incompatible versions, so there are no silent conflicts |
 | ✅ | `barn.lock` with a SHA-256 fingerprint for each egg |
 | ✅ | `barn verify` checks `.barn/` against the lock and catches edited eggs |
-| ✅ | `barn build` and `barn run` refuse a stale lock or edited eggs before handing off to Goose |
+| ✅ | `barn build`, `barn run` and `barn test` refuse a stale lock or edited eggs before handing off to Goose |
 | ✅ | Overrides: pin an egg's version, or point it at a local folder |
 | ✅ | Local repository with immutable releases and timestamped snapshots |
 | ✅ | Dependency tree and flat listing with `barn inspect` and `barn resolve` |
@@ -79,6 +79,7 @@ dependencies = [
 | `barn verify` | check `.barn/` against `barn.lock` |
 | `barn build [-- options...]` | check the eggs, then `goose build` the project |
 | `barn run [-- arguments...]` | check the eggs, then `goose run` the project |
+| `barn test [-- arguments...]` | check the eggs, then `goose run` the project's tests |
 | `barn lay` | put the egg into the repository |
 | `barn inspect` | show the dependency tree |
 | `barn resolve` | list the eggs the project uses |
@@ -87,6 +88,12 @@ dependencies = [
 `.barn/` matches `barn.lock`, then hand the project's main file to `goose` on `PATH`.
 After `--`, `build` passes options to `goose build` and `run` passes arguments to the
 program. Running `goose` directly skips these checks.
+
+`barn test` does the same checks, then runs `test/main_test.goose`, which `barn hatch`
+writes next to `main.goose`. It imports the egg from `../src`, and a test fails by exiting
+with a status other than 0. `test = "path.goose";` in `barn.pkg` runs another file, as
+`main = "path.goose";` does for `barn run`. The tests stay out of the egg, since `barn lay`
+only puts `src/` into the repository.
 
 `barn help <command>` shows a command's options.
 

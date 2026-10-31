@@ -26,6 +26,7 @@ fn help() {
           verify [dir]      check .barn/ against barn.lock
           build [dir]       check the eggs, then build the project with goose
           run [dir]         check the eggs, then run the project with goose
+          test [dir]        check the eggs, then run the project's tests with goose
           lay [dir]         put the egg into the repository
           inspect [dir]     show the dependency tree
           resolve [dir]     list the eggs the project uses
@@ -39,21 +40,21 @@ fn help() {
           -y, --yes         hatch: do not ask
           --force           install, add, remove, upgrade: replace edited or changed eggs
           --release         lay: a release instead of a snapshot
-          -- ...            build: goose's options; run: the program's arguments
+          -- ...            build: goose's options; run, test: the program's arguments
           -h, --help        help for the command
         """);
 }
 
 struct CommandHelp { command: const u8[:], usage: const u8[:], summary: const u8[:] }
 
-let COMMAND_HELP: const CommandHelp[13] = [
+let COMMAND_HELP: const CommandHelp[14] = [
     CommandHelp { command: "hatch", usage: "barn hatch <name> [--here] [--owner NAME] [-y]", summary: """
                       Creates ./<name>, or with --here the current folder, with barn.pkg,
-                      src/<name>.goose, main.goose and .gitignore.
+                      src/<name>.goose, main.goose, test/main_test.goose and .gitignore.
                       """ },
     CommandHelp { command: "install", usage: "barn install [dir] [--repo DIR] [--force]", summary: """
                       Installs the project's eggs into .barn/, updates the imports in
-                      main.goose and writes barn.lock.
+                      main.goose and test/main_test.goose and writes barn.lock.
                       """ },
     CommandHelp { command: "add", usage: "barn add <owner/name[:version]>... [--repo DIR] [--force]", summary: """
                       Adds dependencies to barn.pkg, at the newest release unless a
@@ -74,6 +75,12 @@ let COMMAND_HELP: const CommandHelp[13] = [
     CommandHelp { command: "run", usage: "barn run [dir] [--repo DIR] [-- program arguments...]", summary: """
                       Checks that barn.lock matches barn.pkg and .barn/ matches barn.lock,
                       then runs the project's main file with goose run.
+                      """ },
+    CommandHelp { command: "test", usage: "barn test [dir] [--repo DIR] [-- program arguments...]", summary: """
+                      Checks that barn.lock matches barn.pkg and .barn/ matches barn.lock,
+                      then runs the project's test file (test/main_test.goose unless
+                      barn.pkg sets test) with goose run. A test fails by exiting with
+                      a status other than 0.
                       """ },
     CommandHelp { command: "lay", usage: "barn lay [dir] [--release] [--repo DIR]", summary: """
                       Puts the egg into the repository: a new snapshot, or with
@@ -116,13 +123,13 @@ fn default_repository(out: u8[>..]&) -> bool {
 
 struct Flags { here: bool = false, yes: bool = false, force: bool = false, release: bool = false }
 
-let COMMANDS: const u8[:][11] = [
-    "hatch", "install", "add", "remove", "upgrade", "verify", "build", "run", "lay", "inspect", "resolve",
+let COMMANDS: const u8[:][12] = [
+    "hatch", "install", "add", "remove", "upgrade", "verify", "build", "run", "test", "lay", "inspect", "resolve",
 ];
 
 fn is_edit_command(command: const u8[:]) -> bool { command == "add" || command == "remove" || command == "upgrade" }
 
-fn is_goose_command(command: const u8[:]) -> bool { command == "build" || command == "run" }
+fn is_goose_command(command: const u8[:]) -> bool { command == "build" || command == "run" || command == "test" }
 
 fn check_argument_count(command: const u8[:], count: i64) {
     if is_edit_command(command) {

@@ -17,6 +17,9 @@ All notable changes to Barn are recorded here. The format follows
 - `barn build` and `barn run`, which stop when `barn.lock` does not match `barn.pkg` or
   `.barn/` does not match `barn.lock`, and otherwise hand the project to `goose build` or
   `goose run`.
+- `barn test`, which does the same checks and then runs `test/main_test.goose`, or the file
+  `test` names in `barn.pkg`. `barn hatch` writes the test file, and `barn install` updates
+  its imports as it does those of `main.goose`.
 
 ### Fixed
 
