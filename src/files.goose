@@ -1,10 +1,9 @@
 import std;
 import os;
-import src.version;
 
 fn left_out(name: const u8[:]) -> bool {
-    name[0] == '.' || starts_with(name, SNAPSHOT_PREFIX) || ends_with(name, ".exe") || ends_with(name, ".pdb") ||
-        ends_with(name, ".ilk") || ends_with(name, ".obj")
+    name[0] == '.' || ends_with(name, ".exe") || ends_with(name, ".pdb") || ends_with(name, ".ilk") ||
+        ends_with(name, ".obj")
 }
 
 fn walk<F>(root: const u8[:], include_left_out: bool) -> bool {

@@ -3,17 +3,17 @@ import os;
 import src.version;
 import src.manifest;
 import src.project;
-import src.repository;
+import src.eggs;
 import src.package_edit;
 import src.install;
 import src.lock;
 import src.uses;
 
-fn change_and_install(dir: const u8[:], repository: const u8[:], original: const u8[:], updated: const u8[:],
+fn change_and_install(dir: const u8[:], eggs: const u8[:], original: const u8[:], updated: const u8[:],
                       force: bool, done: const u8[:]) -> u8[>..] {
     let path = package_path(dir);
     guard write_file(path, updated) else { return str("cannot write ", path); }
-    let error = install(dir, repository, force);
+    let error = install(dir, eggs, force);
     guard error.len == 0 else {
         guard write_file(path, original) else { return str(error, "\ncannot restore ", path); }
         return str(error, "\nbarn.pkg unchanged");
@@ -22,10 +22,12 @@ fn change_and_install(dir: const u8[:], repository: const u8[:], original: const
     return str("");
 }
 
-fn version_to_add(repository: const u8[:], egg: const u8[:]) -> Version, bool {
-    let release, released = newest_release(repository, egg);
-    guard !released else { return release, true; }
-    return newest_with_snapshot(repository, egg);
+fn missing_release(eggs: const u8[:], egg: const u8[:]) -> u8[>..] {
+    let found, has_snapshots = newest_with_snapshot(eggs, egg);
+    guard has_snapshots else { return str(egg, " not found"); }
+    var newest = found;
+    newest.snapshot = NEWEST_SNAPSHOT;
+    return str(egg, " has no release; ", egg, ":", newest, " adds its newest snapshot");
 }
 
 fn add_to_project(p: Project, egg: const u8[:], v: Version, done: u8[>..]&) -> u8[>..] {
@@ -45,7 +47,7 @@ fn add_to_project(p: Project, egg: const u8[:], v: Version, done: u8[>..]&) -> u
     return replace_dependency(p, d, entry);
 }
 
-fn add(dir: const u8[:], repository: const u8[:], specs: const u8[:][:], force: bool) -> u8[>..] {
+fn add(dir: const u8[:], eggs: const u8[:], specs: const u8[:][:], force: bool) -> u8[>..] {
     var original: u8[>..] = [];
     guard read_file(package_path(dir), original) else { return str("no barn.pkg in ", dir); }
     var current = str(original);
@@ -64,8 +66,8 @@ fn add(dir: const u8[:], repository: const u8[:], specs: const u8[:][:], force: 
             guard ok else { return str("bad version in '", spec, "'"); }
             v = parsed;
         } else {
-            let found, ok = version_to_add(repository, egg);
-            guard ok else { return str(egg, " not found"); }
+            let found, released = newest_release(eggs, egg);
+            guard released else { return missing_release(eggs, egg); }
             v = found;
         }
         var next: u8[>..] = [];
@@ -78,7 +80,7 @@ fn add(dir: const u8[:], repository: const u8[:], specs: const u8[:][:], force: 
         current.append(next);
     }
     guard current != original else { print(done[1..]); return str(""); }
-    return change_and_install(dir, repository, original, current, force, done[1..]);
+    return change_and_install(dir, eggs, original, current, force, done[1..]);
 }
 
 fn warn_about_lost_uses(dir: const u8[:], package: const u8[:], before: const Locked[:]) {
@@ -101,7 +103,7 @@ fn warn_about_lost_uses(dir: const u8[:], package: const u8[:], before: const Lo
     if count > 0 { write_stderr(str("warning: no longer in .barn/, but used:", uses, "\n")); }
 }
 
-fn remove(dir: const u8[:], repository: const u8[:], specs: const u8[:][:], force: bool) -> u8[>..] {
+fn remove(dir: const u8[:], eggs: const u8[:], specs: const u8[:][:], force: bool) -> u8[>..] {
     var original: u8[>..] = [];
     guard read_file(package_path(dir), original) else { return str("no barn.pkg in ", dir); }
     var current = str(original);
@@ -121,13 +123,13 @@ fn remove(dir: const u8[:], repository: const u8[:], specs: const u8[:][:], forc
         current.clear();
         current.append(next);
     }
-    let error = change_and_install(dir, repository, original, current, force, done[1..]);
+    let error = change_and_install(dir, eggs, original, current, force, done[1..]);
     guard error.len == 0 else { return error; }
     warn_about_lost_uses(dir, current, before);
     return str("");
 }
 
-fn upgrade_project(p: Project, repository: const u8[:], specs: const u8[:][:], updated: u8[>..]&, done: u8[>..]&,
+fn upgrade_project(p: Project, eggs: const u8[:], specs: const u8[:][:], updated: u8[>..]&, done: u8[>..]&,
                    available: u8[>..]&) -> u8[>..] {
     var wanted: bool[>..] = [];
     for _ in p.dependencies.len { wanted.push(specs.len == 0); }
@@ -139,13 +141,13 @@ fn upgrade_project(p: Project, repository: const u8[:], specs: const u8[:][:], u
     var copied_to = 0;
     for d, i in p.dependencies {
         if wanted[i] {
-            let compatible_release, has_compatible = newest_compatible_release(repository, d.name, d.version);
+            let compatible_release, has_compatible = newest_compatible_release(eggs, d.name, d.version);
             if has_compatible && is_newer(compatible_release, d.version) {
                 format(done, "\n", d.name, ": ", d.version, " -> ", compatible_release);
                 format(updated, p.text[copied_to..d.at], d.name, ":", compatible_release);
                 copied_to = d.end;
             }
-            let newest, has_newest = newest_release(repository, d.name);
+            let newest, has_newest = newest_release(eggs, d.name);
             if has_newest && !compatible(newest, d.version) && is_newer(newest, d.version) {
                 format(available, "\n", d.name, ":", newest, " available (incompatible)");
             }
@@ -155,7 +157,7 @@ fn upgrade_project(p: Project, repository: const u8[:], specs: const u8[:][:], u
     return str("");
 }
 
-fn upgrade(dir: const u8[:], repository: const u8[:], specs: const u8[:][:], force: bool) -> u8[>..] {
+fn upgrade(dir: const u8[:], eggs: const u8[:], specs: const u8[:][:], force: bool) -> u8[>..] {
     var original: u8[>..] = [];
     guard read_file(package_path(dir), original) else { return str("no barn.pkg in ", dir); }
     var updated: u8[>..] = [];
@@ -163,10 +165,10 @@ fn upgrade(dir: const u8[:], repository: const u8[:], specs: const u8[:][:], for
     var available: u8[>..] = [];
     var failed: u8[>..] = [];
     let error = with_project_text(dir, original) {
-        failed.append(upgrade_project(it, repository, specs, updated, done, available));
+        failed.append(upgrade_project(it, eggs, specs, updated, done, available));
     };
     guard error.len == 0 else { return error; }
     guard failed.len == 0 else { return failed; }
     guard done.len > 0 else { print("up to date", available); return str(""); }
-    return change_and_install(dir, repository, original, updated, force, str(done[1..], available));
+    return change_and_install(dir, eggs, original, updated, force, str(done[1..], available));
 }

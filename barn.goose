@@ -8,6 +8,7 @@ import src.lay;
 import src.install;
 import src.edit;
 import src.build;
+import src.files;
 
 let VERSION = "0.1.0";
 
@@ -27,14 +28,13 @@ fn help() {
           build [dir]       check the eggs, then build the project with goose
           run [dir]         check the eggs, then run the project with goose
           test [dir]        check the eggs, then run the project's tests with goose
-          lay [dir]         put the egg into the repository
+          lay [dir]         put the egg into ~/.barn/eggs
           inspect [dir]     show the dependency tree
           resolve [dir]     list the eggs the project uses
           help [command]    show help
           version           show barn's version
 
         options:
-          --repo DIR        the repository (default: $BARN_REPO, else ~/.barn/repository)
           --owner NAME      the owner of a new egg (default: $BARN_OWNER)
           --here            hatch: in the current folder
           -y, --yes         hatch: do not ask
@@ -42,6 +42,9 @@ fn help() {
           --release         lay: a release instead of a snapshot
           -- ...            build: goose's options; run, test: the program's arguments
           -h, --help        help for the command
+
+        environment:
+          BARN_HOME         barn's folder, holding eggs/ (default: ~/.barn)
         """);
 }
 
@@ -52,42 +55,42 @@ let COMMAND_HELP: const CommandHelp[14] = [
                       Creates ./<name>, or with --here the current folder, with barn.pkg,
                       src/<name>.goose, main.goose, test/main_test.goose and .gitignore.
                       """ },
-    CommandHelp { command: "install", usage: "barn install [dir] [--repo DIR] [--force]", summary: """
+    CommandHelp { command: "install", usage: "barn install [dir] [--force]", summary: """
                       Installs the project's eggs into .barn/, updates the imports in
                       main.goose and test/main_test.goose and writes barn.lock.
                       """ },
-    CommandHelp { command: "add", usage: "barn add <owner/name[:version]>... [--repo DIR] [--force]", summary: """
+    CommandHelp { command: "add", usage: "barn add <owner/name[:version]>... [--force]", summary: """
                       Adds dependencies to barn.pkg, at the newest release unless a
                       version is given, then installs.
                       """ },
-    CommandHelp { command: "remove", usage: "barn remove <egg>... [--repo DIR] [--force]",
+    CommandHelp { command: "remove", usage: "barn remove <egg>... [--force]",
                   summary: "Removes dependencies from barn.pkg, then installs." },
-    CommandHelp { command: "upgrade", usage: "barn upgrade [egg]... [--repo DIR] [--force]", summary: """
+    CommandHelp { command: "upgrade", usage: "barn upgrade [egg]... [--force]", summary: """
                       Upgrades all dependencies, or those named, to their newest
                       compatible releases, then installs.
                       """ },
-    CommandHelp { command: "verify", usage: "barn verify [dir] [--repo DIR]",
+    CommandHelp { command: "verify", usage: "barn verify [dir]",
                   summary: "Checks .barn/ against barn.lock." },
-    CommandHelp { command: "build", usage: "barn build [dir] [--repo DIR] [-- goose options...]", summary: """
+    CommandHelp { command: "build", usage: "barn build [dir] [-- goose options...]", summary: """
                       Checks that barn.lock matches barn.pkg and .barn/ matches barn.lock,
                       then builds the project's main file with goose build.
                       """ },
-    CommandHelp { command: "run", usage: "barn run [dir] [--repo DIR] [-- program arguments...]", summary: """
+    CommandHelp { command: "run", usage: "barn run [dir] [-- program arguments...]", summary: """
                       Checks that barn.lock matches barn.pkg and .barn/ matches barn.lock,
                       then runs the project's main file with goose run.
                       """ },
-    CommandHelp { command: "test", usage: "barn test [dir] [--repo DIR] [-- program arguments...]", summary: """
+    CommandHelp { command: "test", usage: "barn test [dir] [-- program arguments...]", summary: """
                       Checks that barn.lock matches barn.pkg and .barn/ matches barn.lock,
                       then runs the project's test file (test/main_test.goose unless
                       barn.pkg sets test) with goose run. A test fails by exiting with
                       a status other than 0.
                       """ },
-    CommandHelp { command: "lay", usage: "barn lay [dir] [--release] [--repo DIR]", summary: """
-                      Puts the egg into the repository: a new snapshot, or with
+    CommandHelp { command: "lay", usage: "barn lay [dir] [--release]", summary: """
+                      Puts the egg into ~/.barn/eggs: a new snapshot, or with
                       --release the release.
                       """ },
-    CommandHelp { command: "inspect", usage: "barn inspect [dir] [--repo DIR]", summary: "Shows the dependency tree." },
-    CommandHelp { command: "resolve", usage: "barn resolve [dir] [--repo DIR]",
+    CommandHelp { command: "inspect", usage: "barn inspect [dir]", summary: "Shows the dependency tree." },
+    CommandHelp { command: "resolve", usage: "barn resolve [dir]",
                   summary: "Lists the eggs the project uses." },
     CommandHelp { command: "help", usage: "barn help [command]", summary: "" },
     CommandHelp { command: "version", usage: "barn version", summary: "" },
@@ -109,15 +112,14 @@ fn fail_usage(message: const u8[:]) {
     exit(2);
 }
 
-fn default_repository(out: u8[>..]&) -> bool {
-    var home: u8[>..] = [];
-    if env("BARN_HOME", home) && home.len > 0 { format(out, home, "/repository"); return true; }
-    home.clear();
-    if !env("USERPROFILE", home) || home.len == 0 {
-        home.clear();
-        guard env("HOME", home) && home.len > 0 else { return false; }
+fn barn_home(out: u8[>..]&) -> bool {
+    if env("BARN_HOME", out) && out.len > 0 { return true; }
+    out.clear();
+    if !env("USERPROFILE", out) || out.len == 0 {
+        out.clear();
+        guard env("HOME", out) && out.len > 0 else { return false; }
     }
-    format(out, home, "/.barn/repository");
+    out.append("/.barn");
     return true;
 }
 
@@ -130,6 +132,8 @@ let COMMANDS: const u8[:][12] = [
 fn is_edit_command(command: const u8[:]) -> bool { command == "add" || command == "remove" || command == "upgrade" }
 
 fn is_goose_command(command: const u8[:]) -> bool { command == "build" || command == "run" || command == "test" }
+
+fn moves_eggs(command: const u8[:]) -> bool { is_edit_command(command) || command == "install" || command == "lay" }
 
 fn check_argument_count(command: const u8[:], count: i64) {
     if is_edit_command(command) {
@@ -144,35 +148,33 @@ fn run_hatch(arguments: const u8[:][:], owner: const u8[:], flags: Flags) -> u8[
     return hatch(arguments[0], flags.here, owner, flags.yes);
 }
 
-fn run_listing(dir: const u8[:], repository: const u8[:], inspects: bool) -> u8[>..] {
-    return resolve(dir, repository) {
+fn run_listing(dir: const u8[:], eggs: const u8[:], inspects: bool) -> u8[>..] {
+    return resolve(dir, eggs) {
         if inspects { print_tree(it); } else { print_list(it); }
     };
 }
 
-fn run_in_project(command: const u8[:], arguments: const u8[:][:], passed: const u8[:][:], repository: const u8[:],
+fn run_in_project(command: const u8[:], arguments: const u8[:][:], passed: const u8[:][:], eggs: const u8[:],
                   flags: Flags) -> u8[>..] {
     if is_edit_command(command) {
-        if command == "add" { return add(".", repository, arguments, flags.force); }
-        if command == "remove" { return remove(".", repository, arguments, flags.force); }
-        return upgrade(".", repository, arguments, flags.force);
+        if command == "add" { return add(".", eggs, arguments, flags.force); }
+        if command == "remove" { return remove(".", eggs, arguments, flags.force); }
+        return upgrade(".", eggs, arguments, flags.force);
     }
     let dir: const u8[:] = if arguments.len == 1 { arguments[0] } else { "." };
-    if command == "install" { return install(dir, repository, flags.force); }
-    if command == "verify" { return verify(dir, repository); }
-    if is_goose_command(command) { return run_goose(command, dir, repository, passed); }
-    if command == "lay" { return lay(dir, repository, flags.release); }
-    return run_listing(dir, repository, command == "inspect");
+    if command == "install" { return install(dir, eggs, flags.force); }
+    if command == "verify" { return verify(dir, eggs); }
+    if is_goose_command(command) { return run_goose(command, dir, eggs, passed); }
+    if command == "lay" { return lay(dir, eggs, flags.release); }
+    return run_listing(dir, eggs, command == "inspect");
 }
 
 fn run(command: const u8[:], argv: u8[:][:]) -> u8[>..] {
     var arguments: (const u8[:])[>..] = [];
-    var repository: u8[>..] = [];
     var owner: u8[>..] = [];
     var lowered: u8[>..] = [];
     var passed: (const u8[:])[>..] = [];
     var flags = Flags {};
-    env("BARN_REPO", repository);
     env("BARN_OWNER", owner);
     var i = 0;
     while i < argv.len {
@@ -184,10 +186,10 @@ fn run(command: const u8[:], argv: u8[:][:]) -> u8[>..] {
         else if a == "--here" { flags.here = true; }
         else if a == "--force" { flags.force = true; }
         else if a == "--release" { flags.release = true; }
-        else if a == "--repo" || a == "--owner" {
+        else if a == "--owner" {
             guard i < argv.len else { fail_usage(str(a, " needs a value")); }
-            if a == "--repo" { repository.clear(); repository.append(argv[i]); }
-            else { owner.clear(); owner.append(argv[i]); }
+            owner.clear();
+            owner.append(argv[i]);
             i++;
         } else {
             guard !starts_with(a, "-") else { fail_usage(str("unknown option '", a, "' for ", command)); }
@@ -198,10 +200,11 @@ fn run(command: const u8[:], argv: u8[:][:]) -> u8[>..] {
         return run_hatch(arguments, lowercase_owner(owner, owner.len, lowered), flags);
     }
     check_argument_count(command, arguments.len);
-    if repository.len == 0 && !default_repository(repository) {
-        fail_usage("no repository: --repo DIR, BARN_REPO or BARN_HOME");
-    }
-    return run_in_project(command, arguments, passed, repository, flags);
+    var eggs: u8[>..] = [];
+    guard barn_home(eggs) else { return str("no home folder: set BARN_HOME"); }
+    eggs.append("/eggs");
+    guard !moves_eggs(command) || is_dir(eggs) || make_dirs(eggs) else { return str("cannot create ", eggs); }
+    return run_in_project(command, arguments, passed, eggs, flags);
 }
 
 fn main() {

@@ -51,7 +51,14 @@ released acme/numbers:0.1.1  sha256:1616b4a9c67415eace1a5512966ba98306a41cf86bbe
 $ barn lay --release
 released acme/numbers:0.2.0  sha256:c3db5d1ef3279fcc5a5e7f2310c7b8501f31840af61d0d5becd21cef94648502
 $ barn lay
-laid acme/numbers:0.2.0_snapshot_<stamp>  sha256:c3db5d1ef3279fcc5a5e7f2310c7b8501f31840af61d0d5becd21cef94648502
+laid acme/numbers:0.2.0_snapshot_<stamp>_c3db5d1ef327  sha256:c3db5d1ef3279fcc5a5e7f2310c7b8501f31840af61d0d5becd21cef94648502
+$ barn lay
+acme/numbers:0.2.0_snapshot_<stamp>_c3db5d1ef327 is already laid
+$ ls <work>/home/eggs/acme/numbers
+0.1.0
+0.1.1
+0.2.0
+0.2.0_snapshot_<stamp>_c3db5d1ef327
 $ cd ..
 
 ## add and upgrade
@@ -106,13 +113,13 @@ $ barn add acme/numbers:0.2.0
 acme/numbers:0.2.0 unchanged
 $ barn add acme/numbers:0.2.0_snapshot
 installed 1 egg
-  acme/numbers:0.2.0_snapshot_<stamp>
+  acme/numbers:0.2.0_snapshot_<stamp>_c3db5d1ef327
 acme/numbers: 0.2.0 -> 0.2.0_snapshot
 $ barn inspect
 acme/app:0.1.0
-\- acme/numbers:0.2.0_snapshot -> 0.2.0_snapshot_<stamp>
+\- acme/numbers:0.2.0_snapshot -> 0.2.0_snapshot_<stamp>_c3db5d1ef327
 $ barn resolve
-acme/numbers:0.2.0_snapshot_<stamp>
+acme/numbers:0.2.0_snapshot_<stamp>_c3db5d1ef327
 $ barn add acme/numbers:0.2.0_snapshot
 acme/numbers:0.2.0_snapshot unchanged
 $ barn add acme/nothing
@@ -155,7 +162,7 @@ two words
 --
 --repo
 [exit 3]
-$ barn run . --repo <work>/repo
+$ barn run .
 [exit 3]
 $ barn run
 barn: no barn.lock in .
@@ -233,15 +240,15 @@ installed 1 egg
 $ barn verify
 verified 1 egg
 
-## repository changed
+## eggs folder changed
 $ barn install
 barn: nothing was changed:
-  acme/numbers:0.2.0: changed in the repository since barn lay:
+  acme/numbers:0.2.0: changed in the eggs folder since barn lay:
     numbers.goose was edited
 [exit 1]
 $ barn install
 barn: nothing was changed:
-  acme/numbers:0.2.0: the repository copy differs from barn.lock:
+  acme/numbers:0.2.0: the copy in the eggs folder differs from barn.lock:
     numbers.goose was edited
 --force overrides
 [exit 1]
@@ -480,7 +487,7 @@ warning: owner 'Acme' is not lowercase: using 'acme'
 $ cd ..
 
 ## resolution
-$ barn inspect <root>/test/repository/../app --repo <root>/test/repository
+$ barn inspect <root>/test/app
 acme/api:0.1.0
 +- acme/web:1.2.0 -> 1.4.1
 |  \- acme/net:0.3.2
@@ -488,30 +495,30 @@ acme/api:0.1.0
 |  +- acme/web:1.4.1 (*)
 |  \- example/json:0.5.0
 \- example/json:0.5.0
-$ barn resolve <root>/test/repository/../app --repo <root>/test/repository
+$ barn resolve <root>/test/app
 acme/web:1.4.1
 example/auth:1.0.0
 example/json:0.5.0
 acme/net:0.3.2
 $ cd resolution
-$ barn inspect --repo <root>/test/repository
+$ barn inspect
 barn: cannot resolve acme/app:
   example/json: incompatible versions
     the project wants 0.6.0
     example/auth:1.0.0 wants 0.5.0
   a/b:1.0.0 not found (wanted by the project)
 [exit 1]
-$ barn inspect --repo <root>/test/repository
+$ barn inspect
 acme/app:0.1.0
 +- example/auth:1.0.0
 |  +- acme/web:1.4.1
 |  |  \- acme/net:0.3.2
 |  \- example/json:0.5.0 -> 0.6.0  (override)
 \- example/json:0.6.0  (override)
-$ barn resolve --repo <root>/test/repository
+$ barn resolve
 warning: unused override acme/net
 example/json:0.5.0
-$ barn resolve --repo <root>/test/repository
+$ barn resolve
 barn: cannot resolve acme/app:
   no snapshot of acme/net:0.3.0 (wanted by the project)
 [exit 1]
@@ -519,35 +526,38 @@ $ cd ..
 
 ## barn.pkg errors
 $ cd errors
-$ barn resolve --repo <root>/test/repository
-$ barn resolve --repo <root>/test/repository
+$ barn resolve
+$ barn resolve
 barn: ./barn.pkg: line 4: dependencyManagement is not supported: use overrides
 [exit 1]
-$ barn resolve --repo <root>/test/repository
+$ barn resolve
 barn: ./barn.pkg: line 4: local is not supported: use overrides
 [exit 1]
-$ barn resolve --repo <root>/test/repository
+$ barn resolve
 barn: ./barn.pkg: line 4: 'example/json' needs a version
 [exit 1]
-$ barn resolve --repo <root>/test/repository
+$ barn resolve
 barn: ./barn.pkg: line 4: '0.4.0->0.5.0': ranges are not supported
 [exit 1]
-$ barn resolve --repo <root>/test/repository
+$ barn resolve
 barn: ./barn.pkg: line 4: bad version '0.4'
 [exit 1]
-$ barn resolve --repo <root>/test/repository
+$ barn resolve
+barn: ./barn.pkg: line 4: bad version '0.5.0_snapshot_<stamp>'
+[exit 1]
+$ barn resolve
 barn: ./barn.pkg: line 4: example/json is in dependencies twice
 [exit 1]
-$ barn resolve --repo <root>/test/repository
+$ barn resolve
 barn: ./barn.pkg: line 4: version is given twice
 [exit 1]
-$ barn resolve --repo <root>/test/repository
+$ barn resolve
 barn: ./barn.pkg: line 4: bad test '../outside.goose'
 [exit 1]
-$ barn resolve --repo <root>/test/repository
+$ barn resolve
 barn: ./barn.pkg: line 5: test is given twice
 [exit 1]
-$ barn resolve --repo <root>/test/repository
+$ barn resolve
 barn: ./barn.pkg: line 4: unknown key 'colour'
 [exit 1]
 $ cd ..
@@ -568,14 +578,13 @@ commands:
   build [dir]       check the eggs, then build the project with goose
   run [dir]         check the eggs, then run the project with goose
   test [dir]        check the eggs, then run the project's tests with goose
-  lay [dir]         put the egg into the repository
+  lay [dir]         put the egg into ~/.barn/eggs
   inspect [dir]     show the dependency tree
   resolve [dir]     list the eggs the project uses
   help [command]    show help
   version           show barn's version
 
 options:
-  --repo DIR        the repository (default: $BARN_REPO, else ~/.barn/repository)
   --owner NAME      the owner of a new egg (default: $BARN_OWNER)
   --here            hatch: in the current folder
   -y, --yes         hatch: do not ask
@@ -583,6 +592,9 @@ options:
   --release         lay: a release instead of a snapshot
   -- ...            build: goose's options; run, test: the program's arguments
   -h, --help        help for the command
+
+environment:
+  BARN_HOME         barn's folder, holding eggs/ (default: ~/.barn)
 [exit 2]
 $ barn frob
 barn: unknown command 'frob'
@@ -605,17 +617,17 @@ barn: install takes at most one folder
 Run 'barn help' for usage.
 [exit 2]
 $ barn help lay
-usage: barn lay [dir] [--release] [--repo DIR]
+usage: barn lay [dir] [--release]
 
-Puts the egg into the repository: a new snapshot, or with
+Puts the egg into ~/.barn/eggs: a new snapshot, or with
 --release the release.
 $ barn help run
-usage: barn run [dir] [--repo DIR] [-- program arguments...]
+usage: barn run [dir] [-- program arguments...]
 
 Checks that barn.lock matches barn.pkg and .barn/ matches barn.lock,
 then runs the project's main file with goose run.
 $ barn help test
-usage: barn test [dir] [--repo DIR] [-- program arguments...]
+usage: barn test [dir] [-- program arguments...]
 
 Checks that barn.lock matches barn.pkg and .barn/ matches barn.lock,
 then runs the project's test file (test/main_test.goose unless
@@ -627,3 +639,39 @@ Run 'barn help' for usage.
 [exit 2]
 $ barn version
 barn <version>
+
+## releases only
+$ barn hatch draft
+$ cd draft
+$ barn lay
+$ cd ..
+$ cd releases
+$ barn add acme/draft
+barn: acme/draft has no release; acme/draft:0.1.0_snapshot adds its newest snapshot
+[exit 1]
+$ barn add acme/draft:0.1.0
+barn: cannot resolve acme/app:
+  acme/draft:0.1.0 not found (wanted by the project)
+barn.pkg unchanged
+[exit 1]
+$ barn add acme/draft:0.1.0_snapshot
+installed 1 egg, no main.goose
+  acme/draft:0.1.0_snapshot_<stamp>_8ca24e4daabd
+added acme/draft:0.1.0_snapshot
+$ cd ..
+
+## eggs folder
+$ barn hatch plain
+$ barn resolve plain
+$ test -d <work>/other-home/eggs
+[exit 1]
+$ barn install plain
+installed 0 eggs
+$ ls <work>/other-home
+eggs
+$ barn install plain
+installed 0 eggs
+$ barn lay plain
+laid acme/plain:0.1.0_snapshot_<stamp>_35eaa76873a4  sha256:35eaa76873a41096844552f10f59e408fc6dcfbe347046b42d66c23cd23b7a61
+$ ls <work>/user/.barn
+eggs
