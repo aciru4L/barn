@@ -15,9 +15,9 @@ A package manager for [Goose](https://github.com/aardappel/goose). Packages are
 | ✅ | Install eggs into `.barn/` and update the imports in `main.goose` and `test/main_test.goose` automatically |
 | ✅ | Minimal version selection |
 | ✅ | Errors on incompatible versions, so there are no silent conflicts |
-| ✅ | `barn.lock` with a SHA-256 fingerprint for each egg |
-| ✅ | `barn verify` checks `.barn/` against the lock and catches edited eggs |
-| ✅ | `barn build`, `barn run` and `barn test` refuse a stale lock or edited eggs before handing off to Goose |
+| ✅ | SHA-256 sums of every egg, kept in `~/.barn/eggs` |
+| ✅ | `barn verify` checks `.barn/` against `barn.json` and the eggs folder, and catches edited eggs |
+| ✅ | `barn build`, `barn run` and `barn test` refuse out-of-date or edited eggs before handing off to Goose |
 | ✅ | Overrides: pin an egg's version, or point it at a local folder |
 | ✅ | Local eggs folder with immutable releases and snapshots named by time and content |
 | ✅ | Dependency tree and flat listing with `barn inspect` and `barn resolve` |
@@ -82,7 +82,7 @@ egg to the version to use instead, or to a local folder starting with `./` or `.
 | `barn add <egg>...` | add dependencies |
 | `barn remove <egg>...` | remove dependencies |
 | `barn upgrade [egg]...` | upgrade dependencies to their newest compatible releases |
-| `barn verify` | check `.barn/` against `barn.lock` |
+| `barn verify` | check `.barn/` against `barn.json` and `~/.barn/eggs` |
 | `barn build [-- options...]` | check the eggs, then `goose build` the project |
 | `barn run [-- arguments...]` | check the eggs, then `goose run` the project |
 | `barn test [-- arguments...]` | check the eggs, then `goose run` the project's tests |
@@ -91,8 +91,10 @@ egg to the version to use instead, or to a local folder starting with `./` or `.
 | `barn inspect` | show the dependency tree |
 | `barn resolve` | list the eggs the project uses |
 
-`barn build` and `barn run` first check that `barn.lock` matches `barn.json` and that
-`.barn/` matches `barn.lock`, then hand the project's main file to `goose` on `PATH`.
+`barn build` and `barn run` first check that each egg in `.barn/` is the version `barn.json`
+asks for and matches its sums in `~/.barn/eggs`, then hand the project's main file to `goose`
+on `PATH`. Each copy records the version it was installed from in `barn.egg`; for
+`0.1.0_snapshot`, any snapshot of 0.1.0 passes, and `barn install` looks for a newer one.
 After `--`, `build` passes options to `goose build` and `run` passes arguments to the
 program. Running `goose` directly skips these checks.
 
@@ -116,7 +118,7 @@ exist and declare `namespace <name>;`. These stay out:
 - dot-files and dot-folders, such as `.git` and `.barn`
 - in a git repository, the files git ignores, so the egg holds what the next commit could
 - built files ending in `.exe`, `.pdb`, `.ilk` or `.obj`
-- `barn.json`, which Barn writes into the egg itself, and `barn.lock`
+- `barn.json`, which Barn writes into the egg itself
 - the `main` and `test` files
 - `test/`, `tests/`, `examples/`, `bench/` and `docs/`
 - whatever `"exclude": ["notes", "tools/gen.goose"]` lists

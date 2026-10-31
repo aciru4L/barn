@@ -72,10 +72,6 @@ added acme/numbers:0.1.0
     "acme/numbers": "0.1.0"
   }
 }
---- barn.lock
-locked = [
-    "acme/numbers:0.1.0 sha256:cede036da2928182b200e575e2faddf0508910345a699618527a0a10838d49b2",
-];
 --- main.goose
 import numbers from "./.barn/numbers";
 
@@ -135,15 +131,13 @@ $ barn build -- -o <work>/app-executable
 $ <work>/app-executable
 honk from numbers
 $ barn run
-barn: barn.lock does not match barn.json:
-  acme/numbers:0.1.1 is not in barn.lock
-  acme/numbers:0.2.0 is no longer used
+barn: .barn/ differs from the eggs folder:
+  .barn/numbers holds acme/numbers:0.2.0, barn.json asks for acme/numbers:0.1.1
 barn install updates it
 [exit 1]
 $ barn build
-barn: barn.lock does not match barn.json:
-  acme/numbers:0.1.1 is not in barn.lock
-  acme/numbers:0.2.0 is no longer used
+barn: .barn/ differs from the eggs folder:
+  .barn/numbers holds acme/numbers:0.2.0, barn.json asks for acme/numbers:0.1.1
 barn install updates it
 [exit 1]
 $ barn run --bogus
@@ -160,8 +154,9 @@ two words
 $ barn run .
 [exit 3]
 $ barn run
-barn: no barn.lock in .
-barn install writes it
+barn: .barn/ differs from the eggs folder:
+  .barn/numbers is missing
+barn install updates it
 [exit 1]
 $ cd ../app
 
@@ -171,9 +166,8 @@ $ barn test
 honk: got 'honk from app'
 [exit 1]
 $ barn test
-barn: barn.lock does not match barn.json:
-  acme/numbers:0.1.1 is not in barn.lock
-  acme/numbers:0.2.0 is no longer used
+barn: .barn/ differs from the eggs folder:
+  .barn/numbers holds acme/numbers:0.2.0, barn.json asks for acme/numbers:0.1.1
 barn install updates it
 [exit 1]
 $ barn test
@@ -207,18 +201,19 @@ $ cd ../app
 $ barn verify
 verified 1 egg
 $ barn verify
-barn: .barn/ differs from barn.lock:
+barn: .barn/ differs from the eggs folder:
   .barn/numbers was edited:
     .barn/numbers/numbers.goose was edited
+barn install --force restores it
 [exit 1]
 $ barn run
-barn: .barn/ differs from barn.lock:
+barn: .barn/ differs from the eggs folder:
   .barn/numbers was edited:
     .barn/numbers/numbers.goose was edited
 barn install --force restores it
 [exit 1]
 $ barn build
-barn: .barn/ differs from barn.lock:
+barn: .barn/ differs from the eggs folder:
   .barn/numbers was edited:
     .barn/numbers/numbers.goose was edited
 barn install --force restores it
@@ -243,8 +238,8 @@ barn: nothing was changed:
 [exit 1]
 $ barn install
 barn: nothing was changed:
-  acme/numbers:0.2.0: the copy in the eggs folder differs from barn.lock:
-    numbers.goose was edited
+  .barn/numbers was edited:
+    .barn/numbers/numbers.goose was edited
 --force overrides
 [exit 1]
 $ barn install --force
@@ -281,9 +276,6 @@ fn main() {
         exit(1);
     }
 }
---- barn.lock
-locked = [
-];
 $ barn remove numbers
 barn: barn.json has no dependency numbers
 [exit 1]
@@ -378,10 +370,6 @@ acme/app:0.1.0
 import numbers from "../numbers";
 
 fn main() {}
---- barn.lock
-locked = [
-    "acme/numbers:0.2.0 local",
-];
 $ barn verify
 verified 0 eggs
 $ barn run
@@ -432,10 +420,8 @@ warning: owner 'Acme' is not lowercase: using 'acme'
 warning: owner 'ACME' is not lowercase: using 'acme'
 installed 1 egg, main.goose updated
   acme/numbers:0.1.1
---- barn.lock
-locked = [
-    "acme/numbers:0.1.1 sha256:2a0c7d463bec67ae2388b9f766c4acb5e51196597cadddf1615a1fac1dd3ff78",
-];
+$ ls .barn
+numbers
 $ barn add ACME/stats
 warning: owner 'ACME' is not lowercase: using 'acme'
 warning: owner 'Acme' is not lowercase: using 'acme'
@@ -583,7 +569,7 @@ commands:
   add <egg>...      add dependencies
   remove <egg>...   remove dependencies
   upgrade [egg]...  upgrade dependencies to their newest compatible releases
-  verify [dir]      check .barn/ against barn.lock
+  verify [dir]      check .barn/ against barn.json and ~/.barn/eggs
   build [dir]       check the eggs, then build the project with goose
   run [dir]         check the eggs, then run the project with goose
   test [dir]        check the eggs, then run the project's tests with goose
@@ -636,12 +622,12 @@ the files the egg would hold, without laying it.
 $ barn help run
 usage: barn run [dir] [-- program arguments...]
 
-Checks that barn.lock matches barn.json and .barn/ matches barn.lock,
+Checks that .barn/ holds what barn.json asks for, unedited,
 then runs the project's main file with goose run.
 $ barn help test
 usage: barn test [dir] [-- program arguments...]
 
-Checks that barn.lock matches barn.json and .barn/ matches barn.lock,
+Checks that .barn/ holds what barn.json asks for, unedited,
 then runs the project's test file (test/main_test.goose unless
 barn.json sets test) with goose run. A test fails by exiting with
 a status other than 0.
