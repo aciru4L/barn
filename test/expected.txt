@@ -51,7 +51,14 @@ released acme/numbers:0.1.1  sha256:1616b4a9c67415eace1a5512966ba98306a41cf86bbe
 $ barn lay --release
 released acme/numbers:0.2.0  sha256:c3db5d1ef3279fcc5a5e7f2310c7b8501f31840af61d0d5becd21cef94648502
 $ barn lay
-laid acme/numbers:0.2.0_snapshot_<stamp>  sha256:c3db5d1ef3279fcc5a5e7f2310c7b8501f31840af61d0d5becd21cef94648502
+laid acme/numbers:0.2.0_snapshot_<stamp>_c3db5d1ef327  sha256:c3db5d1ef3279fcc5a5e7f2310c7b8501f31840af61d0d5becd21cef94648502
+$ barn lay
+acme/numbers:0.2.0_snapshot_<stamp>_c3db5d1ef327 is already laid
+$ ls <work>/home/eggs/acme/numbers
+0.1.0
+0.1.1
+0.2.0
+0.2.0_snapshot_<stamp>_c3db5d1ef327
 $ cd ..
 
 ## add and upgrade
@@ -106,13 +113,13 @@ $ barn add acme/numbers:0.2.0
 acme/numbers:0.2.0 unchanged
 $ barn add acme/numbers:0.2.0_snapshot
 installed 1 egg
-  acme/numbers:0.2.0_snapshot_<stamp>
+  acme/numbers:0.2.0_snapshot_<stamp>_c3db5d1ef327
 acme/numbers: 0.2.0 -> 0.2.0_snapshot
 $ barn inspect
 acme/app:0.1.0
-\- acme/numbers:0.2.0_snapshot -> 0.2.0_snapshot_<stamp>
+\- acme/numbers:0.2.0_snapshot -> 0.2.0_snapshot_<stamp>_c3db5d1ef327
 $ barn resolve
-acme/numbers:0.2.0_snapshot_<stamp>
+acme/numbers:0.2.0_snapshot_<stamp>_c3db5d1ef327
 $ barn add acme/numbers:0.2.0_snapshot
 acme/numbers:0.2.0_snapshot unchanged
 $ barn add acme/nothing
@@ -536,6 +543,9 @@ $ barn resolve
 barn: ./barn.pkg: line 4: bad version '0.4'
 [exit 1]
 $ barn resolve
+barn: ./barn.pkg: line 4: bad version '0.5.0_snapshot_<stamp>'
+[exit 1]
+$ barn resolve
 barn: ./barn.pkg: line 4: example/json is in dependencies twice
 [exit 1]
 $ barn resolve
@@ -642,6 +652,6 @@ eggs
 $ barn install plain
 installed 0 eggs
 $ barn lay plain
-laid acme/plain:0.1.0_snapshot_<stamp>  sha256:35eaa76873a41096844552f10f59e408fc6dcfbe347046b42d66c23cd23b7a61
+laid acme/plain:0.1.0_snapshot_<stamp>_35eaa76873a4  sha256:35eaa76873a41096844552f10f59e408fc6dcfbe347046b42d66c23cd23b7a61
 $ ls <work>/user/.barn
 eggs

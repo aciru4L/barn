@@ -1,39 +1,29 @@
 import std;
 import os;
 import src.version;
-import src.checksum;
 
-fn egg_dir(eggs: const u8[:], egg: const u8[:], v: Version) -> u8[>..] {
-    var path = str(eggs, "/", egg, "/", release_of(v));
-    if is_snapshot(v) { format(path, "/", SNAPSHOT_PREFIX); format_stamp(path, v.snapshot); }
-    return path;
-}
+fn egg_dir(eggs: const u8[:], egg: const u8[:], v: Version) -> u8[>..] { str(eggs, "/", egg, "/", v) }
 
 fn is_released(eggs: const u8[:], egg: const u8[:], v: Version) -> bool {
     file_exists(str(egg_dir(eggs, egg, release_of(v)), "/barn.pkg"))
 }
 
-fn is_sealed(eggs: const u8[:], egg: const u8[:], v: Version) -> bool {
-    file_exists(str(egg_dir(eggs, egg, release_of(v)), "/", SUM_FILE))
-}
-
-fn each_version<F>(eggs: const u8[:], egg: const u8[:]) {
+fn each_laid<F>(eggs: const u8[:], egg: const u8[:]) {
     var listing: u8[>..] = [];
     list_dir(str(eggs, "/", egg), listing);
     each_split(listing, '\n') {
         let v, ok = parse_version(it);
-        if ok && is_release(v) { F(v); }
+        if ok && !wants_newest_snapshot(v) { F(v); }
     };
 }
 
+fn each_version<F>(eggs: const u8[:], egg: const u8[:]) { each_laid(eggs, egg) { F(release_of(it)); }; }
+
 fn newest_snapshot(eggs: const u8[:], egg: const u8[:], v: Version) -> Version {
-    var listing: u8[>..] = [];
-    list_dir(egg_dir(eggs, egg, release_of(v)), listing);
     var newest = release_of(v);
-    each_split(listing, '\n') {
-        if starts_with(it, SNAPSHOT_PREFIX) {
-            let stamp, ok = parse_stamp(it[SNAPSHOT_PREFIX.len..]);
-            if ok && stamp > newest.snapshot { newest.snapshot = stamp; }
+    each_laid(eggs, egg) {
+        if is_snapshot(it) && release_of(it) == release_of(v) && (!is_snapshot(newest) || is_newer(it, newest)) {
+            newest = it;
         }
     };
     return newest;

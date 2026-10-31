@@ -84,6 +84,8 @@ scenario() {
     sed -i 's/0.1.1/0.2.0/' barn.pkg
     run barn lay --release
     run barn lay
+    run barn lay
+    run ls "$BARN_HOME/eggs/acme/numbers"
     enter ..
 
     section "add and upgrade"
@@ -267,6 +269,8 @@ scenario() {
     write_pkg $'dependencies = ["example/json:0.4.0->0.5.0"];\n'
     BARN_HOME="$fixtures" run barn resolve
     write_pkg $'dependencies = ["example/json:0.4"];\n'
+    BARN_HOME="$fixtures" run barn resolve
+    write_pkg $'dependencies = ["example/json:0.5.0_snapshot_20260101T000000Z"];\n'
     BARN_HOME="$fixtures" run barn resolve
     write_pkg $'dependencies = ["example/json:0.5.0", "example/json:0.5.0"];\n'
     BARN_HOME="$fixtures" run barn resolve
