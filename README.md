@@ -27,7 +27,7 @@ A package manager for [Goose](https://github.com/aardappel/goose). Packages are
 | ❌ | Dependencies fetched straight from Git or a URL |
 | ❌ | Searching and browsing available eggs |
 | ❌ | Signed releases and yanking bad versions |
-| ❌ | A stable `barn.pkg` format |
+| ❌ | A stable `barn.json` format |
 
 ## Build
 
@@ -55,17 +55,23 @@ barn inspect
 barn run
 ```
 
-A project describes itself and its dependencies in `barn.pkg`:
+A project describes itself and its dependencies in `barn.json`:
 
-```goose
-owner = "acme";
-name = "app";
-version = "0.1.0";
-
-dependencies = [
-    "acme/numbers:0.1.0",
-];
+```json
+{
+  "owner": "acme",
+  "name": "app",
+  "version": "0.1.0",
+  "dependencies": {
+    "acme/numbers": "0.1.0"
+  }
+}
 ```
+
+`barn.json` is strict JSON, with no comments or trailing commas. Besides `owner`, `name`,
+`version` and `dependencies`, it may set `main` and `test`, and `overrides`, which maps an
+egg to the version to use instead, or to a local folder starting with `./` or `../`.
+`add`, `remove` and `upgrade` rewrite the file in this layout.
 
 ## Commands
 
@@ -84,15 +90,15 @@ dependencies = [
 | `barn inspect` | show the dependency tree |
 | `barn resolve` | list the eggs the project uses |
 
-`barn build` and `barn run` first check that `barn.lock` matches `barn.pkg` and that
+`barn build` and `barn run` first check that `barn.lock` matches `barn.json` and that
 `.barn/` matches `barn.lock`, then hand the project's main file to `goose` on `PATH`.
 After `--`, `build` passes options to `goose build` and `run` passes arguments to the
 program. Running `goose` directly skips these checks.
 
 `barn test` does the same checks, then runs `test/main_test.goose`, which `barn hatch`
 writes next to `main.goose`. It imports the egg from `../src`, and a test fails by exiting
-with a status other than 0. `test = "path.goose";` in `barn.pkg` runs another file, as
-`main = "path.goose";` does for `barn run`. The tests stay out of the egg, since `barn lay`
+with a status other than 0. `"test": "path.goose"` in `barn.json` runs another file, as
+`"main": "path.goose"` does for `barn run`. The tests stay out of the egg, since `barn lay`
 only puts `src/` into `~/.barn/eggs`.
 
 Barn keeps its eggs in `~/.barn/eggs`, or in `eggs/` under `BARN_HOME` when that is set.
@@ -102,7 +108,7 @@ beside it in `owner/name/0.1.0_snapshot_<stamp>_<hash>/`: the UTC time it was la
 first 12 hex digits of its content hash. Laying unchanged content again reports the
 snapshot it already is.
 
-In `barn.pkg`, `0.1.0` means that release and nothing else, `0.1.0_snapshot` the newest
+In `barn.json`, `0.1.0` means that release and nothing else, `0.1.0_snapshot` the newest
 snapshot of it, and `0.1.0_snapshot_<stamp>_<hash>` that one snapshot. `barn add` without a
 version picks the newest release.
 

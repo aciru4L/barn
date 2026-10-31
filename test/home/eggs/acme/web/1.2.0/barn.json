@@ -1,0 +1,9 @@
+{
+  "owner": "acme",
+  "name": "web",
+  "version": "1.2.0",
+  "dependencies": {
+    "acme/net": "0.3.0",
+    "example/json": "0.4.1"
+  }
+}

@@ -16,7 +16,7 @@ fn change_and_install(dir: const u8[:], eggs: const u8[:], original: const u8[:]
     let error = install(dir, eggs, force);
     guard error.len == 0 else {
         guard write_file(path, original) else { return str(error, "\ncannot restore ", path); }
-        return str(error, "\nbarn.pkg unchanged");
+        return str(error, "\nbarn.json unchanged");
     }
     print(done);
     return str("");
@@ -31,11 +31,10 @@ fn missing_release(eggs: const u8[:], egg: const u8[:]) -> u8[>..] {
 }
 
 fn add_to_project(p: Project, egg: const u8[:], v: Version, done: u8[>..]&) -> u8[>..] {
-    let entry = str(egg, ":", v);
     let index = find_dependency(p, egg);
     guard index >= 0 && p.dependencies[index].name == egg else {
-        format(done, "\nadded ", entry);
-        return insert_dependency(p, entry);
+        format(done, "\nadded ", egg, ":", v);
+        return insert_dependency(p, Dependency { name: egg, version: v });
     }
     let d = p.dependencies[index];
     guard d.version != v else {
@@ -44,12 +43,12 @@ fn add_to_project(p: Project, egg: const u8[:], v: Version, done: u8[>..]&) -> u
     }
     format(done, "\n", egg, ": ", d.version, " -> ", v);
     if !compatible(d.version, v) { done.append(" (incompatible)"); }
-    return replace_dependency(p, d, entry);
+    return replace_dependency(p, d, v);
 }
 
 fn add(dir: const u8[:], eggs: const u8[:], specs: const u8[:][:], force: bool) -> u8[>..] {
     var original: u8[>..] = [];
-    guard read_file(package_path(dir), original) else { return str("no barn.pkg in ", dir); }
+    guard read_file(package_path(dir), original) else { return str("no barn.json in ", dir); }
     var current = str(original);
     var done: u8[>..] = [];
     for spec in specs {
@@ -105,7 +104,7 @@ fn warn_about_lost_uses(dir: const u8[:], package: const u8[:], before: const Lo
 
 fn remove(dir: const u8[:], eggs: const u8[:], specs: const u8[:][:], force: bool) -> u8[>..] {
     var original: u8[>..] = [];
-    guard read_file(package_path(dir), original) else { return str("no barn.pkg in ", dir); }
+    guard read_file(package_path(dir), original) else { return str("no barn.json in ", dir); }
     var current = str(original);
     var lock_source: u8[>..] = [];
     var before: Locked[>..] = [];
@@ -115,7 +114,7 @@ fn remove(dir: const u8[:], eggs: const u8[:], specs: const u8[:][:], force: boo
         var next: u8[>..] = [];
         let error = with_project_text(dir, current) {
             let index = find_dependency(it, spec);
-            guard index >= 0 else { return str("barn.pkg has no dependency ", spec); }
+            guard index >= 0 else { return str("barn.json has no dependency ", spec); }
             format(done, "\nremoved ", it.dependencies[index]);
             next.append(remove_dependency(it, it.dependencies[index]));
         };
@@ -135,31 +134,32 @@ fn upgrade_project(p: Project, eggs: const u8[:], specs: const u8[:][:], updated
     for _ in p.dependencies.len { wanted.push(specs.len == 0); }
     for spec in specs {
         let index = find_dependency(p, spec);
-        guard index >= 0 else { return str("barn.pkg has no dependency ", spec); }
+        guard index >= 0 else { return str("barn.json has no dependency ", spec); }
         wanted[index] = true;
     }
-    var copied_to = 0;
+    var dependencies: Dependency[>..] = [];
     for d, i in p.dependencies {
+        var kept = d;
         if wanted[i] {
             let compatible_release, has_compatible = newest_compatible_release(eggs, d.name, d.version);
             if has_compatible && is_newer(compatible_release, d.version) {
                 format(done, "\n", d.name, ": ", d.version, " -> ", compatible_release);
-                format(updated, p.text[copied_to..d.at], d.name, ":", compatible_release);
-                copied_to = d.end;
+                kept.version = compatible_release;
             }
             let newest, has_newest = newest_release(eggs, d.name);
             if has_newest && !compatible(newest, d.version) && is_newer(newest, d.version) {
                 format(available, "\n", d.name, ":", newest, " available (incompatible)");
             }
         }
+        dependencies.push(kept);
     }
-    updated.append(p.text[copied_to..]);
+    updated.append(with_dependencies(p, dependencies[..]));
     return str("");
 }
 
 fn upgrade(dir: const u8[:], eggs: const u8[:], specs: const u8[:][:], force: bool) -> u8[>..] {
     var original: u8[>..] = [];
-    guard read_file(package_path(dir), original) else { return str("no barn.pkg in ", dir); }
+    guard read_file(package_path(dir), original) else { return str("no barn.json in ", dir); }
     var updated: u8[>..] = [];
     var done: u8[>..] = [];
     var available: u8[>..] = [];

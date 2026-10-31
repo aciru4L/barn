@@ -1,4 +1,0 @@
-owner = "acme";
-name = "web";
-version = "1.4.1";
-dependencies = ["acme/net:0.3.2"];

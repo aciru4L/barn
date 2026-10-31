@@ -1,6 +1,8 @@
 import std;
 import os;
+import src.version;
 import src.manifest;
+import src.package_edit;
 
 fn confirm(question: const u8[:]) -> bool {
     write_stdout(str(question, " [y/N] "));
@@ -49,7 +51,7 @@ fn describe_contents(listing: const u8[:]) -> u8[>..], i64 {
 
 fn prepare_existing_folder(target: const u8[:], label: const u8[:], egg: const u8[:], name: const u8[:],
                            yes: bool) -> u8[>..] {
-    for file in ["barn.pkg", "main.goose", "test/main_test.goose"] {
+    for file in ["barn.json", "main.goose", "test/main_test.goose"] {
         guard !file_exists(str(target, "/", file)) else { return str(file, " already exists in ", label); }
     }
     let entry = str("src/", name, ".goose");
@@ -71,8 +73,12 @@ fn prepare_folder(target: const u8[:], label: const u8[:], egg: const u8[:], nam
 }
 
 fn write_project_files(target: const u8[:], owner: const u8[:], name: const u8[:]) -> bool {
-    let pkg = str("owner = \"", owner, "\";\n", "name = \"", name, "\";\n", "version = \"0.1.0\";\n\n",
-                  "dependencies = [\n];\n");
+    let egg = str(owner, "/", name);
+    let first = Version { major: 0, minor: 1, patch: 0 };
+    let dependencies: Dependency[>..] = [];
+    let overrides: Override[>..] = [];
+    let pkg = package_text(Manifest { egg: Dependency { name: egg, version: first }, .. }, dependencies[..],
+                           overrides[..]);
     let entry = str("namespace ", name, ";\n\n", "fn honk() -> const u8[:] {\n", "    return \"honk from ", name,
                     "\";\n", "}\n");
     let main = str("import src.", name, ";\n\n", "fn main() {\n", "    print(", name, "::honk());\n", "}\n");
@@ -80,7 +86,7 @@ fn write_project_files(target: const u8[:], owner: const u8[:], name: const u8[:
                    "    guard ", name, "::honk() == \"honk from ", name, "\" else {\n",
                    "        print(\"honk: got '\", ", name, "::honk(), \"'\");\n",
                    "        exit(1);\n", "    }\n", "}\n");
-    return write_file(str(target, "/barn.pkg"), pkg) && make_dir(str(target, "/src")) &&
+    return write_file(str(target, "/barn.json"), pkg) && make_dir(str(target, "/src")) &&
            write_file(str(target, "/src/", name, ".goose"), entry) && write_file(str(target, "/main.goose"), main) &&
            make_dir(str(target, "/test")) && write_file(str(target, "/test/main_test.goose"), test) &&
            add_ignore_lines(str(target, "/.gitignore"));

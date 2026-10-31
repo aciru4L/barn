@@ -62,7 +62,7 @@ fn resolve<F>(dir: const u8[:], eggs: const u8[:]) -> u8[>..] {
 
     fn load_egg(egg: const u8[:], v: Version) -> i64 {
         guard !wants_newest_snapshot(v) else { return -1; }
-        let path = str(egg_dir(eggs, egg, v), "/barn.pkg");
+        let path = str(egg_dir(eggs, egg, v), "/barn.json");
         guard file_exists(path) else { return -1; }
         let index = load_file(path);
         let found = manifests[index].egg;
@@ -88,14 +88,14 @@ fn resolve<F>(dir: const u8[:], eggs: const u8[:]) -> u8[>..] {
     fn add_override(project: Manifest, index: i64) {
         let o = overrides[index];
         guard o.name != project.egg.name else {
-            fail(str("barn.pkg overrides ", o.name, ", which is the project itself"));
+            fail(str("barn.json overrides ", o.name, ", which is the project itself"));
         }
         guard is_local(o) else {
             override_node.insert(o.name, node(o.name, concrete_version(eggs, o.name, o.version), -1, index));
             return;
         }
-        let path = str(dir, "/", o.path, "/barn.pkg");
-        guard file_exists(path) else { fail(str("override ", o.name, ": there is no barn.pkg in ", o.path)); }
+        let path = str(dir, "/", o.path, "/barn.json");
+        guard file_exists(path) else { fail(str("override ", o.name, ": there is no barn.json in ", o.path)); }
         let loaded = load_file(path);
         let found = manifests[loaded].egg.name;
         guard found == o.name else { fail(str("override ", o.name, ": ", o.path, " holds ", found)); }
@@ -136,7 +136,7 @@ fn resolve<F>(dir: const u8[:], eggs: const u8[:]) -> u8[>..] {
         return lookup(newest_node, egg);
     }
 
-    let root = load_file(str(dir, "/barn.pkg"));
+    let root = load_file(str(dir, "/barn.json"));
     let project = manifests[root];
     node(project.egg.name, project.egg.version, root, -1);
     for i in project.first_override..overrides_end(project) { add_override(project, i); }

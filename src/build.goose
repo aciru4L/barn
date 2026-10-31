@@ -37,7 +37,7 @@ fn check_build(p: Project, b: Build, eggs: const u8[:]) -> u8[>..] {
     guard has_lock || b.used.len == 1 else { return str("no barn.lock in ", p.dir, "\nbarn install writes it"); }
     var stale: u8[>..] = [];
     describe_stale_lock(b, entries, stale);
-    guard stale.len == 0 else { return str("barn.lock does not match barn.pkg:", stale, "\nbarn install updates it"); }
+    guard stale.len == 0 else { return str("barn.lock does not match barn.json:", stale, "\nbarn install updates it"); }
     var edited: u8[>..] = [];
     check_copies(p.dir, eggs, entries, edited);
     guard edited.len == 0 else {

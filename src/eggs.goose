@@ -5,7 +5,7 @@ import src.version;
 fn egg_dir(eggs: const u8[:], egg: const u8[:], v: Version) -> u8[>..] { str(eggs, "/", egg, "/", v) }
 
 fn is_released(eggs: const u8[:], egg: const u8[:], v: Version) -> bool {
-    file_exists(str(egg_dir(eggs, egg, release_of(v)), "/barn.pkg"))
+    file_exists(str(egg_dir(eggs, egg, release_of(v)), "/barn.json"))
 }
 
 fn each_laid<F>(eggs: const u8[:], egg: const u8[:]) {

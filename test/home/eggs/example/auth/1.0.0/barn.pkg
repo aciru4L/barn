@@ -1,4 +1,0 @@
-owner = "example";
-name = "auth";
-version = "1.0.0";
-dependencies = ["acme/web:1.4.1", "example/json:0.5.0"];

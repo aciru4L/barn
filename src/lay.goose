@@ -14,14 +14,14 @@ fn check_layable(p: Project) -> u8[>..] {
     guard find(entry, str("namespace ", name, ";")) >= 0 else {
         return str("src/", name, ".goose needs namespace ", name, ";");
     }
-    for reserved in ["barn.pkg", SUM_FILE] {
+    for reserved in ["barn.json", SUM_FILE] {
         guard !file_exists(str(p.dir, "/src/", reserved)) else { return str("src/", reserved, " is not allowed"); }
     }
     return str("");
 }
 
 fn stage_egg(p: Project, stage: const u8[:], sums: u8[>..]&) -> bool {
-    let staged = copy_tree(str(p.dir, "/src"), stage) && write_file(str(stage, "/barn.pkg"), p.text) &&
+    let staged = copy_tree(str(p.dir, "/src"), stage) && write_file(str(stage, "/barn.json"), p.text) &&
                  file_sums(stage, sums) && write_file(str(stage, "/", SUM_FILE), sums);
     if !staged { delete_tree(stage); }
     return staged;
