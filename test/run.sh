@@ -319,6 +319,8 @@ scenario() {
     printf 'readme\n' > README.md
     printf 'built\n' > shapes.exe
     sed -i 's/"version": "0.1.0",/"version": "0.1.0",\n  "exclude": ["notes"],/' barn.json
+    printf 'namespace shapes;\nimport numbers from "acme/numbers@v0.1.0";\n' > uses.goose
+    run barn lay --check
     run barn lay --release
     run ls -A "$BARN_HOME/eggs/acme/shapes/0.1.0"
     run barn add acme/numbers:0.1.0
@@ -380,6 +382,7 @@ scenario() {
     silently barn hatch plain
     export BARN_HOME="$work/other-home"
     run barn resolve plain
+    run barn lay --check plain
     run test -d "$BARN_HOME/eggs"
     run barn install plain
     run ls "$BARN_HOME"

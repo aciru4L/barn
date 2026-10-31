@@ -87,6 +87,7 @@ egg to the version to use instead, or to a local folder starting with `./` or `.
 | `barn run [-- arguments...]` | check the eggs, then `goose run` the project |
 | `barn test [-- arguments...]` | check the eggs, then `goose run` the project's tests |
 | `barn lay` | put the egg into `~/.barn/eggs` |
+| `barn lay --check` | check the egg and list the files it would hold |
 | `barn inspect` | show the dependency tree |
 | `barn resolve` | list the eggs the project uses |
 
@@ -121,6 +122,12 @@ exist and declare `namespace <name>;`. These stay out:
 - whatever `"exclude": ["notes", "tools/gen.goose"]` lists
 
 `LICENSE*` and `README*` at the top of the project always ship.
+
+Eggs import their dependencies by name only, as in `import numbers;`: versions belong in
+`barn.json`. `barn lay` warns about a line such as `import numbers from "acme/numbers@v1"` in
+a file it ships, since Goose would refuse it next to the import line Barn writes.
+`barn lay --check` runs every check and lists the files the egg would hold, without laying
+it.
 
 ## The eggs folder
 

@@ -600,6 +600,7 @@ options:
   -y, --yes         hatch: do not ask
   --force           install, add, remove, upgrade: replace edited or changed eggs
   --release         lay: a release instead of a snapshot
+  --check           lay: only check the egg and list what it would hold
   -- ...            build: goose's options; run, test: the program's arguments
   -h, --help        help for the command
 
@@ -627,10 +628,11 @@ barn: install takes at most one folder
 Run 'barn help' for usage.
 [exit 2]
 $ barn help lay
-usage: barn lay [dir] [--release]
+usage: barn lay [dir] [--release | --check]
 
 Puts the egg into ~/.barn/eggs: a new snapshot, or with
---release the release.
+--release the release. --check runs the same checks and lists
+the files the egg would hold, without laying it.
 $ barn help run
 usage: barn run [dir] [-- program arguments...]
 
@@ -654,8 +656,17 @@ barn <version>
 $ barn hatch shapes --app
 hatched acme/shapes:0.1.0
 $ cd shapes
+$ barn lay --check
+warning: uses.goose:2 says where numbers comes from; versions belong in barn.json
+acme/shapes:0.1.0 can be laid:
+  LICENSE
+  README.md
+  extra.goose
+  shapes.goose
+  uses.goose
 $ barn lay --release
-released acme/shapes:0.1.0  sha256:d56e86e4218405764e729563b99fba93c1d7464a94988ff2c09bdc4860520158
+warning: uses.goose:2 says where numbers comes from; versions belong in barn.json
+released acme/shapes:0.1.0  sha256:123810e15194bb1c617e32c2137c3a6a5b696a0c933e0f22b3e00d0201113078
 $ ls -A <work>/home/eggs/acme/shapes/0.1.0
 LICENSE
 README.md
@@ -663,6 +674,7 @@ barn.json
 barn.sha256
 extra.goose
 shapes.goose
+uses.goose
 $ barn add acme/numbers:0.1.0
 installed 1 egg, main.goose updated, test/main_test.goose updated
   acme/numbers:0.1.0
@@ -752,6 +764,9 @@ $ cd ..
 ## eggs folder
 $ barn hatch plain
 $ barn resolve plain
+$ barn lay --check plain
+acme/plain:0.1.0 can be laid:
+  plain.goose
 $ test -d <work>/other-home/eggs
 [exit 1]
 $ barn install plain

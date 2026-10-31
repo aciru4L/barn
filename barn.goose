@@ -41,6 +41,7 @@ fn help() {
           -y, --yes         hatch: do not ask
           --force           install, add, remove, upgrade: replace edited or changed eggs
           --release         lay: a release instead of a snapshot
+          --check           lay: only check the egg and list what it would hold
           -- ...            build: goose's options; run, test: the program's arguments
           -h, --help        help for the command
 
@@ -87,9 +88,10 @@ let COMMAND_HELP: const CommandHelp[14] = [
                       barn.json sets test) with goose run. A test fails by exiting with
                       a status other than 0.
                       """ },
-    CommandHelp { command: "lay", usage: "barn lay [dir] [--release]", summary: """
+    CommandHelp { command: "lay", usage: "barn lay [dir] [--release | --check]", summary: """
                       Puts the egg into ~/.barn/eggs: a new snapshot, or with
-                      --release the release.
+                      --release the release. --check runs the same checks and lists
+                      the files the egg would hold, without laying it.
                       """ },
     CommandHelp { command: "inspect", usage: "barn inspect [dir]", summary: "Shows the dependency tree." },
     CommandHelp { command: "resolve", usage: "barn resolve [dir]",
@@ -125,7 +127,8 @@ fn barn_home(out: u8[>..]&) -> bool {
     return true;
 }
 
-struct Flags { here: bool = false, yes: bool = false, force: bool = false, release: bool = false, app: bool = false }
+struct Flags { here: bool = false, yes: bool = false, force: bool = false, release: bool = false, app: bool = false,
+               check: bool = false }
 
 let COMMANDS: const u8[:][12] = [
     "hatch", "install", "add", "remove", "upgrade", "verify", "build", "run", "test", "lay", "inspect", "resolve",
@@ -167,7 +170,7 @@ fn run_in_project(command: const u8[:], arguments: const u8[:][:], passed: const
     if command == "install" { return install(dir, eggs, flags.force); }
     if command == "verify" { return verify(dir, eggs); }
     if is_goose_command(command) { return run_goose(command, dir, eggs, passed); }
-    if command == "lay" { return lay(dir, eggs, flags.release); }
+    if command == "lay" { return lay(dir, eggs, flags.release, flags.check); }
     return run_listing(dir, eggs, command == "inspect");
 }
 
@@ -189,6 +192,7 @@ fn run(command: const u8[:], argv: u8[:][:]) -> u8[>..] {
         else if a == "--app" { flags.app = true; }
         else if a == "--force" { flags.force = true; }
         else if a == "--release" { flags.release = true; }
+        else if a == "--check" { flags.check = true; }
         else if a == "--owner" {
             guard i < argv.len else { fail_usage(str(a, " needs a value")); }
             owner.clear();
@@ -206,7 +210,8 @@ fn run(command: const u8[:], argv: u8[:][:]) -> u8[>..] {
     var eggs: u8[>..] = [];
     guard barn_home(eggs) else { return str("no home folder: set BARN_HOME"); }
     eggs.append("/eggs");
-    guard !moves_eggs(command) || is_dir(eggs) || make_dirs(eggs) else { return str("cannot create ", eggs); }
+    let creates_eggs = moves_eggs(command) && !flags.check;
+    guard !creates_eggs || is_dir(eggs) || make_dirs(eggs) else { return str("cannot create ", eggs); }
     return run_in_project(command, arguments, passed, eggs, flags);
 }
 

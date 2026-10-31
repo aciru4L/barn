@@ -85,8 +85,49 @@ fn lay_snapshot(p: Project, eggs: const u8[:], stage: const u8[:], sums: const u
     return str("");
 }
 
-fn lay_project(p: Project, eggs: const u8[:], release: bool) -> u8[>..] {
+fn source_import(line: const u8[:]) -> const u8[:] {
+    let t = trim(line);
+    let from = find(t, " from \"");
+    guard starts_with(t, "import ") && from > 7 else { return t[..0]; }
+    return trim(t[7..from]);
+}
+
+fn warn_about_source_imports(p: Project) {
+    each_egg_file(p) { from, path =>
+        if ends_with(path, ".goose") {
+            var text: u8[>..] = [];
+            read_file(from, text);
+            var line = 0;
+            each_split(text, '\n') {
+                line++;
+                let name = source_import(it);
+                if name.len > 0 {
+                    write_stderr(str("warning: ", path, ":", line, " says where ", name,
+                                     " comes from; versions belong in barn.json\n"));
+                }
+            };
+        }
+    };
+}
+
+fn check_egg(p: Project) -> u8[>..] {
     let invalid = check_layable(p);
+    guard invalid.len == 0 else { return invalid; }
+    warn_about_source_imports(p);
+    return str("");
+}
+
+fn check_project(p: Project) -> u8[>..] {
+    let invalid = check_egg(p);
+    guard invalid.len == 0 else { return invalid; }
+    var files: u8[>..] = [];
+    each_egg_file(p) { _, path => format(files, "\n  ", path); };
+    print(p.manifest.egg, " can be laid:", files);
+    return str("");
+}
+
+fn lay_project(p: Project, eggs: const u8[:], release: bool) -> u8[>..] {
+    let invalid = check_egg(p);
     guard invalid.len == 0 else { return invalid; }
     let egg = p.manifest.egg;
     guard !release || !is_released(eggs, egg.name, egg.version) else { return str(egg, " is already released"); }
@@ -99,6 +140,7 @@ fn lay_project(p: Project, eggs: const u8[:], release: bool) -> u8[>..] {
     return lay_snapshot(p, eggs, stage, sums);
 }
 
-fn lay(dir: const u8[:], eggs: const u8[:], release: bool) -> u8[>..] {
+fn lay(dir: const u8[:], eggs: const u8[:], release: bool, check: bool) -> u8[>..] {
+    guard !check else { return with_project(dir) { return check_project(it); }; }
     return with_project(dir) { return lay_project(it, eggs, release); };
 }

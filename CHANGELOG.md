@@ -32,6 +32,8 @@ All notable changes to Barn are recorded here. The format follows
   git repository so do the files git ignores.
 - `barn hatch` makes an egg with `<name>.goose` at the top; `barn hatch --app` adds
   `main.goose`.
+- `barn lay --check`, which checks the egg and lists its files without laying it, and a
+  warning when a file in the egg names where a dependency comes from.
 
 ### Fixed
 
