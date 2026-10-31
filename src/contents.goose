@@ -48,7 +48,7 @@ fn is_excluded(p: Project, path: const u8[:]) -> bool {
 fn is_shipped(p: Project, path: const u8[:]) -> bool {
     guard !(source_of(p.manifest) == "." && find(path, "/") < 0 && is_always_shipped(path)) else { return true; }
     guard !contains(LEFT_OUT_FOLDERS[..], first_segment(path)) else { return false; }
-    guard path != "barn.json" && path != "barn.lock" && path != SUM_FILE else { return false; }
+    guard path != "barn.json" && path != SUM_FILE && path != RECORD_FILE else { return false; }
     guard path != inside_source(p, main_file(p)) && path != inside_source(p, test_file(p)) else { return false; }
     return !is_excluded(p, path);
 }

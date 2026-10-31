@@ -6,7 +6,7 @@ import src.project;
 import src.eggs;
 import src.package_edit;
 import src.install;
-import src.lock;
+import src.copies;
 import src.uses;
 
 fn change_and_install(dir: const u8[:], eggs: const u8[:], original: const u8[:], updated: const u8[:],
@@ -82,16 +82,12 @@ fn add(dir: const u8[:], eggs: const u8[:], specs: const u8[:][:], force: bool) 
     return change_and_install(dir, eggs, original, current, force, done[1..]);
 }
 
-fn warn_about_lost_uses(dir: const u8[:], package: const u8[:], before: const Locked[:]) {
+fn warn_about_lost_uses(dir: const u8[:], package: const u8[:], before: const u8[:][:]) {
     var text: u8[>..] = [];
-    var after: Locked[>..] = [];
-    read_lock(dir, text, after);
+    var after: (const u8[:])[>..] = [];
+    installed_names(dir, after, text);
     var lost: (const u8[:])[>..] = [];
-    for entry in before {
-        var kept = false;
-        for remaining in after { if remaining.egg == entry.egg { kept = true; } }
-        if !kept { lost.push(entry.name); }
-    }
+    for name in before { if !contains(after[..], name) { lost.push(name); } }
     var uses: u8[>..] = [];
     var count = 0;
     with_project_text(dir, package) {
@@ -106,9 +102,9 @@ fn remove(dir: const u8[:], eggs: const u8[:], specs: const u8[:][:], force: boo
     var original: u8[>..] = [];
     guard read_file(package_path(dir), original) else { return str("no barn.json in ", dir); }
     var current = str(original);
-    var lock_source: u8[>..] = [];
-    var before: Locked[>..] = [];
-    read_lock(dir, lock_source, before);
+    var installed_text: u8[>..] = [];
+    var before: (const u8[:])[>..] = [];
+    installed_names(dir, before, installed_text);
     var done: u8[>..] = [];
     for spec in specs {
         var next: u8[>..] = [];
@@ -124,7 +120,7 @@ fn remove(dir: const u8[:], eggs: const u8[:], specs: const u8[:][:], force: boo
     }
     let error = change_and_install(dir, eggs, original, current, force, done[1..]);
     guard error.len == 0 else { return error; }
-    warn_about_lost_uses(dir, current, before);
+    warn_about_lost_uses(dir, current, before[..]);
     return str("");
 }
 

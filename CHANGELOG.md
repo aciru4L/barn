@@ -10,7 +10,8 @@ All notable changes to Barn are recorded here. The format follows
 
 - `barn hatch`, `install`, `add`, `remove`, `upgrade`, `verify`, `lay`, `inspect` and `resolve`.
 - `barn.json`, strict JSON, with dependencies and overrides, which `add`, `remove` and
-  `upgrade` rewrite; `barn.lock` with a SHA-256 fingerprint of each egg.
+  `upgrade` rewrite. There is no lock file: the versions follow from `barn.json`, and the
+  SHA-256 sums of each egg live in `~/.barn/eggs`.
 - Minimal version selection: each egg gets the newest version asked for, and incompatible
   versions are an error.
 - A local eggs folder with immutable releases and snapshots: `~/.barn/eggs`, or `eggs/`
@@ -20,8 +21,8 @@ All notable changes to Barn are recorded here. The format follows
 - `0.1.0` asks for that release only, never a snapshot of it; `0.1.0_snapshot` asks for the
   newest snapshot.
 - Prebuilt executables for Linux, macOS and Windows on each GitHub release.
-- `barn build` and `barn run`, which stop when `barn.lock` does not match `barn.json` or
-  `.barn/` does not match `barn.lock`, and otherwise hand the project to `goose build` or
+- `barn build` and `barn run`, which stop when a copy in `.barn/` is not the version
+  `barn.json` asks for or differs from its sums in `~/.barn/eggs`, and otherwise hand the project to `goose build` or
   `goose run`.
 - `barn test`, which does the same checks and then runs `test/main_test.goose`, or the file
   `test` names in `barn.json`. `barn hatch` writes the test file, and `barn install` updates

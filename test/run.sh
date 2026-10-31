@@ -94,7 +94,7 @@ scenario() {
     run barn hatch app --app
     enter app
     run barn add acme/numbers:0.1.0
-    show barn.json barn.lock main.goose test/main_test.goose
+    show barn.json main.goose test/main_test.goose
     run barn upgrade
     run barn add acme/numbers
     run barn add acme/numbers:0.2.0
@@ -170,7 +170,7 @@ scenario() {
 
     section "remove"
     run barn remove numbers
-    show barn.json main.goose test/main_test.goose barn.lock
+    show barn.json main.goose test/main_test.goose
     run barn remove numbers
     enter ..
 
@@ -208,7 +208,7 @@ scenario() {
     write_pkg $'"dependencies": {"acme/numbers": "0.1.0"},\n  "overrides": {"acme/numbers": "../numbers"}'
     run barn install
     run barn inspect
-    show main.goose barn.lock
+    show main.goose
     run barn verify
     without_goose_progress barn run
     run barn add acme/stats
@@ -224,7 +224,7 @@ scenario() {
     printf 'fn main() {}\n' > main.goose
     write_pkg $'"dependencies": {"Acme/numbers": "0.1.0"},\n  "overrides": {"ACME/numbers": "0.1.1"}'
     run barn install
-    show barn.lock
+    run ls .barn
     run barn add ACME/stats
     run barn add acme/Stats
     run barn upgrade numbers
@@ -376,6 +376,13 @@ scenario() {
     run barn add acme/draft
     run barn add acme/draft:0.1.0
     run barn add acme/draft:0.1.0_snapshot
+    enter ../draft
+    printf '// newer\n' >> draft.goose
+    silently barn lay
+    enter ../releases
+    run barn verify
+    run barn install
+    run barn verify
     enter ..
 
     section "eggs folder"

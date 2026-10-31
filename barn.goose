@@ -24,7 +24,7 @@ fn help() {
           add <egg>...      add dependencies
           remove <egg>...   remove dependencies
           upgrade [egg]...  upgrade dependencies to their newest compatible releases
-          verify [dir]      check .barn/ against barn.lock
+          verify [dir]      check .barn/ against barn.json and ~/.barn/eggs
           build [dir]       check the eggs, then build the project with goose
           run [dir]         check the eggs, then run the project with goose
           test [dir]        check the eggs, then run the project's tests with goose
@@ -60,7 +60,7 @@ let COMMAND_HELP: const CommandHelp[14] = [
                       """ },
     CommandHelp { command: "install", usage: "barn install [dir] [--force]", summary: """
                       Installs the project's eggs into .barn/, updates the imports in
-                      main.goose and test/main_test.goose and writes barn.lock.
+                      main.goose and test/main_test.goose.
                       """ },
     CommandHelp { command: "add", usage: "barn add <owner/name[:version]>... [--force]", summary: """
                       Adds dependencies to barn.json, at the newest release unless a
@@ -73,17 +73,17 @@ let COMMAND_HELP: const CommandHelp[14] = [
                       compatible releases, then installs.
                       """ },
     CommandHelp { command: "verify", usage: "barn verify [dir]",
-                  summary: "Checks .barn/ against barn.lock." },
+                  summary: "Checks that .barn/ holds what barn.json asks for, unedited." },
     CommandHelp { command: "build", usage: "barn build [dir] [-- goose options...]", summary: """
-                      Checks that barn.lock matches barn.json and .barn/ matches barn.lock,
+                      Checks that .barn/ holds what barn.json asks for, unedited,
                       then builds the project's main file with goose build.
                       """ },
     CommandHelp { command: "run", usage: "barn run [dir] [-- program arguments...]", summary: """
-                      Checks that barn.lock matches barn.json and .barn/ matches barn.lock,
+                      Checks that .barn/ holds what barn.json asks for, unedited,
                       then runs the project's main file with goose run.
                       """ },
     CommandHelp { command: "test", usage: "barn test [dir] [-- program arguments...]", summary: """
-                      Checks that barn.lock matches barn.json and .barn/ matches barn.lock,
+                      Checks that .barn/ holds what barn.json asks for, unedited,
                       then runs the project's test file (test/main_test.goose unless
                       barn.json sets test) with goose run. A test fails by exiting with
                       a status other than 0.
