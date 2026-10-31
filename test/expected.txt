@@ -745,6 +745,16 @@ $ barn add acme/draft:0.1.0_snapshot
 installed 1 egg
   acme/draft:0.1.0_snapshot_<stamp>_16eee3e1da5f
 added acme/draft:0.1.0_snapshot
+$ cd ../draft
+$ barn lay
+$ cd ../releases
+$ barn verify
+verified 1 egg
+$ barn install
+installed 1 egg
+  acme/draft:0.1.0_snapshot_<stamp>_f5bc384f6d68
+$ barn verify
+verified 1 egg
 $ cd ..
 
 ## eggs folder

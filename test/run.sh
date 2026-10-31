@@ -376,6 +376,13 @@ scenario() {
     run barn add acme/draft
     run barn add acme/draft:0.1.0
     run barn add acme/draft:0.1.0_snapshot
+    enter ../draft
+    printf '// newer\n' >> draft.goose
+    silently barn lay
+    enter ../releases
+    run barn verify
+    run barn install
+    run barn verify
     enter ..
 
     section "eggs folder"
