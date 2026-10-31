@@ -51,11 +51,10 @@ fn describe_contents(listing: const u8[:]) -> u8[>..], i64 {
 
 fn prepare_existing_folder(target: const u8[:], label: const u8[:], egg: const u8[:], name: const u8[:],
                            yes: bool) -> u8[>..] {
-    for file in ["barn.json", "main.goose", "test/main_test.goose"] {
+    let entry = str(name, ".goose");
+    for file in ["barn.json", "main.goose", "test/main_test.goose", entry[..]] {
         guard !file_exists(str(target, "/", file)) else { return str(file, " already exists in ", label); }
     }
-    let entry = str("src/", name, ".goose");
-    guard !file_exists(str(target, "/", entry)) else { return str(entry, " already exists in ", label); }
     var listing: u8[>..] = [];
     guard list_dir(target, listing) else { return str("cannot read ", label); }
     let shown, count = describe_contents(listing);
@@ -72,27 +71,27 @@ fn prepare_folder(target: const u8[:], label: const u8[:], egg: const u8[:], nam
     return str("");
 }
 
-fn write_project_files(target: const u8[:], owner: const u8[:], name: const u8[:]) -> bool {
+fn write_project_files(target: const u8[:], owner: const u8[:], name: const u8[:], app: bool) -> bool {
     let egg = str(owner, "/", name);
     let first = Version { major: 0, minor: 1, patch: 0 };
     let dependencies: Dependency[>..] = [];
     let overrides: Override[>..] = [];
+    let excludes: (const u8[:])[>..] = [];
     let pkg = package_text(Manifest { egg: Dependency { name: egg, version: first }, .. }, dependencies[..],
-                           overrides[..]);
+                           overrides[..], excludes[..]);
     let entry = str("namespace ", name, ";\n\n", "fn honk() -> const u8[:] {\n", "    return \"honk from ", name,
                     "\";\n", "}\n");
-    let main = str("import src.", name, ";\n\n", "fn main() {\n", "    print(", name, "::honk());\n", "}\n");
-    let test = str("import ", name, " from \"../src\";\n\n", "fn main() {\n",
+    let main = str("import ", name, ";\n\n", "fn main() {\n", "    print(", name, "::honk());\n", "}\n");
+    let test = str("import ", name, " from \"..\";\n\n", "fn main() {\n",
                    "    guard ", name, "::honk() == \"honk from ", name, "\" else {\n",
                    "        print(\"honk: got '\", ", name, "::honk(), \"'\");\n",
                    "        exit(1);\n", "    }\n", "}\n");
-    return write_file(str(target, "/barn.json"), pkg) && make_dir(str(target, "/src")) &&
-           write_file(str(target, "/src/", name, ".goose"), entry) && write_file(str(target, "/main.goose"), main) &&
-           make_dir(str(target, "/test")) && write_file(str(target, "/test/main_test.goose"), test) &&
-           add_ignore_lines(str(target, "/.gitignore"));
+    return write_file(str(target, "/barn.json"), pkg) && write_file(str(target, "/", name, ".goose"), entry) &&
+           (!app || write_file(str(target, "/main.goose"), main)) && make_dir(str(target, "/test")) &&
+           write_file(str(target, "/test/main_test.goose"), test) && add_ignore_lines(str(target, "/.gitignore"));
 }
 
-fn hatch(name: const u8[:], here: bool, owner: const u8[:], yes: bool) -> u8[>..] {
+fn hatch(name: const u8[:], here: bool, owner: const u8[:], yes: bool, app: bool) -> u8[>..] {
     let invalid = check_names(name, owner);
     guard invalid.len == 0 else { return invalid; }
     let target: const u8[:] = if here { "." } else { name };
@@ -100,7 +99,7 @@ fn hatch(name: const u8[:], here: bool, owner: const u8[:], yes: bool) -> u8[>..
     let egg = str(owner, "/", name);
     let refused = prepare_folder(target, label, egg, name, yes);
     guard refused.len == 0 else { return refused; }
-    guard write_project_files(target, owner, name) else { return str("cannot write the files in ", label); }
+    guard write_project_files(target, owner, name, app) else { return str("cannot write the files in ", label); }
     print("hatched ", egg, ":0.1.0");
     return str("");
 }
