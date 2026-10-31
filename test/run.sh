@@ -74,7 +74,7 @@ scenario() {
 
     section "hatch and lay"
     run barn hatch numbers
-    show numbers/barn.pkg numbers/src/numbers.goose numbers/main.goose numbers/.gitignore
+    show numbers/barn.pkg numbers/src/numbers.goose numbers/main.goose numbers/test/main_test.goose numbers/.gitignore
     run barn hatch numbers
     run barn hatch Bad-Name
     enter numbers
@@ -91,7 +91,7 @@ scenario() {
     run barn hatch app
     enter app
     run barn add acme/numbers:0.1.0
-    show barn.pkg barn.lock main.goose
+    show barn.pkg barn.lock main.goose test/main_test.goose
     run barn upgrade
     run barn add acme/numbers
     run barn add acme/numbers:0.2.0
@@ -123,6 +123,30 @@ scenario() {
     run barn run
     enter ../app
 
+    section "test"
+    without_goose_progress barn test
+    sed -i 's/"honk from app"/"honk from the app"/' test/main_test.goose
+    without_goose_progress barn test
+    sed -i 's/"honk from the app"/"honk from app"/' test/main_test.goose
+    sed -i 's/numbers:0.2.0/numbers:0.1.1/' barn.pkg
+    run barn test
+    sed -i 's/numbers:0.1.1/numbers:0.2.0/' barn.pkg
+    mv test/main_test.goose test/kept.goose
+    run barn test
+    mv test/kept.goose test/main_test.goose
+    mkdir ../checks
+    enter ../checks
+    mkdir checks
+    printf 'import os;\nfn main() {\n    for a in args()[1..] { print(a); }\n    print(numbers::honk());\n}\n' > checks/all.goose
+    write_pkg $'test = "checks/all.goose";\ndependencies = ["acme/numbers:0.2.0"];\n'
+    run barn install
+    show checks/all.goose
+    without_goose_progress barn test -- one "two words"
+    write_pkg $'test = "checks/missing.goose";\n'
+    run barn install
+    run barn test
+    enter ../app
+
     section "verify and edited copies"
     run barn verify
     printf '// edited\n' >> .barn/numbers/numbers.goose
@@ -143,7 +167,7 @@ scenario() {
 
     section "remove"
     run barn remove numbers
-    show barn.pkg main.goose barn.lock
+    show barn.pkg main.goose test/main_test.goose barn.lock
     run barn remove numbers
     enter ..
 
@@ -249,6 +273,10 @@ scenario() {
     run barn resolve --repo "$fixtures"
     write_pkg $'version = "0.2.0";\n'
     run barn resolve --repo "$fixtures"
+    write_pkg $'test = "../outside.goose";\n'
+    run barn resolve --repo "$fixtures"
+    write_pkg $'test = "a.goose";\ntest = "b.goose";\n'
+    run barn resolve --repo "$fixtures"
     write_pkg $'colour = "red";\n'
     run barn resolve --repo "$fixtures"
     enter ..
@@ -262,6 +290,7 @@ scenario() {
     run barn install a b
     run barn help lay
     run barn help run
+    run barn help test
     run barn help frob
     run barn version
 }

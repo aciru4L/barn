@@ -72,19 +72,41 @@ fn laid_sums(repository: const u8[:], coordinate: const u8[:], out: u8[>..]&) {
     if ok { read_sums(egg_dir(repository, coordinate[..colon], v), out); }
 }
 
-fn update_root_file(p: Project, imports: const u8[:], known: const u8[:][:]) -> u8[>..], u8[>..] {
-    let main = main_file(p);
-    let root = str(p.dir, "/", main);
-    var source: u8[>..] = [];
-    guard read_file(root, source) else {
-        guard p.manifest.main.len == 0 else { return str(""), str("no ", root); }
-        return str(", no ", main), str("");
+fn import_lines(b: Build, root: const u8[:]) -> u8[>..] {
+    let up = path_to_project(root);
+    var lines: u8[>..] = [];
+    for node in b.used[1..] {
+        let name = short_name(b.nodes[node].egg);
+        let folder = local_path(b, node);
+        let source: u8[>..] = if folder.len == 0 { str(up, ".barn/", name) }
+                              else if starts_with(folder, "../") && up == "./" { str(folder, "/src") }
+                              else { str(up, folder, "/src") };
+        format(lines, "import ", name, " from \"", source, "\";\n");
     }
-    var updated: u8[>..] = [];
-    sync_imports(source, imports, known, updated);
-    guard updated != source else { return str(""), str(""); }
-    guard write_file(root, updated) else { return str(""), str("cannot write ", root); }
-    return str(", ", main, " updated"), str("");
+    return lines;
+}
+
+fn update_root_files(p: Project, b: Build, known: const u8[:][:]) -> u8[>..], u8[>..] {
+    var note: u8[>..] = [];
+
+    fn update(root: const u8[:], is_given: bool, reports_missing: bool) {
+        let path = str(p.dir, "/", root);
+        var source: u8[>..] = [];
+        guard read_file(path, source) else {
+            guard !is_given else { return str(""), str("no ", path) from update_root_files; }
+            if reports_missing { format(note, ", no ", root); }
+            return;
+        }
+        var updated: u8[>..] = [];
+        sync_imports(source, import_lines(b, root), known, updated);
+        guard updated != source else { return; }
+        guard write_file(path, updated) else { return str(""), str("cannot write ", path) from update_root_files; }
+        format(note, ", ", root, " updated");
+    }
+
+    update(main_file(p), p.manifest.main.len > 0, true);
+    update(test_file(p), p.manifest.test.len > 0, false);
+    return note, str("");
 }
 
 fn write_lock(dir: const u8[:], lines: const u8[:]) -> u8[>..] {
@@ -99,9 +121,7 @@ fn write_lock(dir: const u8[:], lines: const u8[:]) -> u8[>..] {
 
 fn install_build(p: Project, b: Build, old: const Locked[:], repository: const u8[:], force: bool) -> u8[>..] {
     let barn_dir = str(p.dir, "/.barn");
-    let up = path_to_project(main_file(p));
     var lock_lines: u8[>..] = [];
-    var imports: u8[>..] = [];
     var report: u8[>..] = [];
     var known: (const u8[:])[>..] = [];
     var kept: (const u8[:])[>..] = [];
@@ -114,8 +134,6 @@ fn install_build(p: Project, b: Build, old: const Locked[:], repository: const u
 
     fn plan_local(node: i64, name: const u8[:], coordinate: const u8[:]) {
         let folder = local_path(b, node);
-        let source: u8[>..] = if starts_with(folder, "../") && up == "./" { str(folder) } else { str(up, folder) };
-        format(imports, "import ", name, " from \"", source, "/src\";\n");
         format(lock_lines, coordinate, " ", LOCAL_MARK, "\n");
         format(report, "\n  ", coordinate, "  (", folder, ")");
     }
@@ -161,7 +179,6 @@ fn install_build(p: Project, b: Build, old: const Locked[:], repository: const u
         let copy_hash: u8[>..] = if has_copy { sums_hash(copy_sums) } else { str("") };
         check_repository_copy(coordinate, name, from, sums, hash, copy_sums);
         format(lock_lines, coordinate, " ", hash, "\n");
-        format(imports, "import ", name, " from \"", up, ".barn/", name, "\";\n");
         kept.push(name);
         format(report, "\n  ", coordinate);
         if copy_hash != hash {
@@ -217,7 +234,7 @@ fn install_build(p: Project, b: Build, old: const Locked[:], repository: const u
         return str("nothing was changed:", problems, if overridable { "\n--force overrides" } else { "" });
     }
     update_copies();
-    let note, failed = update_root_file(p, imports, known);
+    let note, failed = update_root_files(p, b, known);
     guard failed.len == 0 else { return failed; }
     let lock_failed = write_lock(p.dir, lock_lines);
     guard lock_failed.len == 0 else { return lock_failed; }

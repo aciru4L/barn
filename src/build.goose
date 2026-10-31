@@ -46,20 +46,23 @@ fn check_build(p: Project, b: Build, repository: const u8[:]) -> u8[>..] {
     return str("");
 }
 
-fn goose_arguments(command: const u8[:], main: const u8[:], passed: const u8[:][:]) -> (const u8[:])[>..] {
-    var arguments: (const u8[:])[>..] = ["goose", command, main];
-    if command == "run" && passed.len > 0 { arguments.push("--"); }
+fn goose_arguments(command: const u8[:], root: const u8[:], passed: const u8[:][:]) -> (const u8[:])[>..] {
+    let goose_command: const u8[:] = if command == "build" { "build" } else { "run" };
+    var arguments: (const u8[:])[>..] = ["goose", goose_command, root];
+    if goose_command == "run" && passed.len > 0 { arguments.push("--"); }
     for a in passed { arguments.push(a); }
     return arguments;
 }
 
 fn run_goose(command: const u8[:], dir: const u8[:], repository: const u8[:], passed: const u8[:][:]) -> u8[>..] {
     return with_project(dir) { p =>
+        let file = if command == "test" { test_file(p) } else { main_file(p) };
+        let root: u8[>..] = if dir == "." { str(file) } else { str(dir, "/", file) };
+        guard command != "test" || file_exists(root) else { return str("no ", root); }
         return resolve(dir, repository) { b =>
             let problem = check_build(p, b, repository);
             guard problem.len == 0 else { return problem; }
-            let main: u8[>..] = if dir == "." { str(main_file(p)) } else { str(dir, "/", main_file(p)) };
-            let status = run_program(goose_arguments(command, main, passed)[..]);
+            let status = run_program(goose_arguments(command, root, passed)[..]);
             guard status >= 0 else { return str("cannot start goose"); }
             if status != 0 { exit(status); }
             return str("");

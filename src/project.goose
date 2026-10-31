@@ -3,6 +3,7 @@ import os;
 import src.manifest;
 
 let DEFAULT_MAIN = "main.goose";
+let DEFAULT_TEST = "test/main_test.goose";
 
 struct Project {
     dir: const u8[:], text: const u8[:], manifest: Manifest, dependencies: const Dependency[:],
@@ -14,6 +15,11 @@ fn package_path(dir: const u8[:]) -> u8[>..] { str(dir, "/barn.pkg") }
 fn main_file(p: Project) -> const u8[:] {
     if p.manifest.main.len > 0 { return p.manifest.main; }
     return DEFAULT_MAIN;
+}
+
+fn test_file(p: Project) -> const u8[:] {
+    if p.manifest.test.len > 0 { return p.manifest.test; }
+    return DEFAULT_TEST;
 }
 
 fn find_dependency(p: Project, egg: const u8[:]) -> i64 {

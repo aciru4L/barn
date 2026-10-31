@@ -22,6 +22,15 @@ import src.numbers;
 fn main() {
     print(numbers::honk());
 }
+--- numbers/test/main_test.goose
+import numbers from "../src";
+
+fn main() {
+    guard numbers::honk() == "honk from numbers" else {
+        print("honk: got '", numbers::honk(), "'");
+        exit(1);
+    }
+}
 --- numbers/.gitignore
 .barn/
 *.exe
@@ -50,7 +59,7 @@ $ barn hatch app
 hatched acme/app:0.1.0
 $ cd app
 $ barn add acme/numbers:0.1.0
-installed 1 egg, main.goose updated
+installed 1 egg, main.goose updated, test/main_test.goose updated
   acme/numbers:0.1.0
 added acme/numbers:0.1.0
 --- barn.pkg
@@ -72,6 +81,17 @@ import src.app;
 
 fn main() {
     print(app::honk());
+}
+--- test/main_test.goose
+import numbers from "../.barn/numbers";
+
+import app from "../src";
+
+fn main() {
+    guard app::honk() == "honk from app" else {
+        print("honk: got '", app::honk(), "'");
+        exit(1);
+    }
 }
 $ barn upgrade
 installed 1 egg
@@ -143,6 +163,44 @@ barn install writes it
 [exit 1]
 $ cd ../app
 
+## test
+$ barn test
+$ barn test
+honk: got 'honk from app'
+[exit 1]
+$ barn test
+barn: barn.lock does not match barn.pkg:
+  acme/numbers:0.1.1 is not in barn.lock
+  acme/numbers:0.2.0 is no longer used
+barn install updates it
+[exit 1]
+$ barn test
+barn: no test/main_test.goose
+[exit 1]
+$ cd ../checks
+$ barn install
+installed 1 egg, no main.goose, checks/all.goose updated
+  acme/numbers:0.2.0
+--- checks/all.goose
+import numbers from "../.barn/numbers";
+
+import os;
+fn main() {
+    for a in args()[1..] { print(a); }
+    print(numbers::honk());
+}
+$ barn test -- one two words
+one
+two words
+honk from numbers
+$ barn install
+barn: no ./checks/missing.goose
+[exit 1]
+$ barn test
+barn: no checks/missing.goose
+[exit 1]
+$ cd ../app
+
 ## verify and edited copies
 $ barn verify
 verified 1 egg
@@ -195,7 +253,7 @@ verified 1 egg
 
 ## remove
 $ barn remove numbers
-installed 0 eggs, main.goose updated
+installed 0 eggs, main.goose updated, test/main_test.goose updated
 removed acme/numbers:0.2.0
 warning: no longer in .barn/, but used:
   main.goose:4 uses numbers
@@ -212,6 +270,15 @@ import src.app;
 fn main() {
     print(numbers::honk());
 }
+--- test/main_test.goose
+import app from "../src";
+
+fn main() {
+    guard app::honk() == "honk from app" else {
+        print("honk: got '", app::honk(), "'");
+        exit(1);
+    }
+}
 --- barn.lock
 locked = [
 ];
@@ -225,14 +292,14 @@ $ barn hatch stats
 hatched acme/stats:0.1.0
 $ cd stats
 $ barn add acme/numbers:0.1.0
-installed 1 egg, main.goose updated
+installed 1 egg, main.goose updated, test/main_test.goose updated
   acme/numbers:0.1.0
 added acme/numbers:0.1.0
 $ barn lay --release
 released acme/stats:0.1.0  sha256:132c0e0b0ebf0dda11a143939cd2b3536592ba63bd4b8326926dcea21be61aa0
 $ cd ../app
 $ barn add acme/stats
-installed 2 eggs, main.goose updated
+installed 2 eggs, main.goose updated, test/main_test.goose updated
   acme/stats:0.1.0
   acme/numbers:0.1.0
 added acme/stats:0.1.0
@@ -241,7 +308,7 @@ acme/app:0.1.0
 \- acme/stats:0.1.0
    \- acme/numbers:0.1.0
 $ barn remove stats
-installed 0 eggs, main.goose updated
+installed 0 eggs, main.goose updated, test/main_test.goose updated
 removed acme/stats:0.1.0
 warning: no longer in .barn/, but used:
   main.goose:4 uses numbers
@@ -475,6 +542,12 @@ $ barn resolve --repo <root>/test/repository
 barn: ./barn.pkg: line 4: version is given twice
 [exit 1]
 $ barn resolve --repo <root>/test/repository
+barn: ./barn.pkg: line 4: bad test '../outside.goose'
+[exit 1]
+$ barn resolve --repo <root>/test/repository
+barn: ./barn.pkg: line 5: test is given twice
+[exit 1]
+$ barn resolve --repo <root>/test/repository
 barn: ./barn.pkg: line 4: unknown key 'colour'
 [exit 1]
 $ cd ..
@@ -494,6 +567,7 @@ commands:
   verify [dir]      check .barn/ against barn.lock
   build [dir]       check the eggs, then build the project with goose
   run [dir]         check the eggs, then run the project with goose
+  test [dir]        check the eggs, then run the project's tests with goose
   lay [dir]         put the egg into the repository
   inspect [dir]     show the dependency tree
   resolve [dir]     list the eggs the project uses
@@ -507,7 +581,7 @@ options:
   -y, --yes         hatch: do not ask
   --force           install, add, remove, upgrade: replace edited or changed eggs
   --release         lay: a release instead of a snapshot
-  -- ...            build: goose's options; run: the program's arguments
+  -- ...            build: goose's options; run, test: the program's arguments
   -h, --help        help for the command
 [exit 2]
 $ barn frob
@@ -540,6 +614,13 @@ usage: barn run [dir] [--repo DIR] [-- program arguments...]
 
 Checks that barn.lock matches barn.pkg and .barn/ matches barn.lock,
 then runs the project's main file with goose run.
+$ barn help test
+usage: barn test [dir] [--repo DIR] [-- program arguments...]
+
+Checks that barn.lock matches barn.pkg and .barn/ matches barn.lock,
+then runs the project's test file (test/main_test.goose unless
+barn.pkg sets test) with goose run. A test fails by exiting with
+a status other than 0.
 $ barn help frob
 barn: unknown command 'frob'
 Run 'barn help' for usage.
