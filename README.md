@@ -102,6 +102,10 @@ beside it in `owner/name/0.1.0_snapshot_<stamp>_<hash>/`: the UTC time it was la
 first 12 hex digits of its content hash. Laying unchanged content again reports the
 snapshot it already is.
 
+In `barn.pkg`, `0.1.0` means that release and nothing else, `0.1.0_snapshot` the newest
+snapshot of it, and `0.1.0_snapshot_<stamp>_<hash>` that one snapshot. `barn add` without a
+version picks the newest release.
+
 `barn help <command>` shows a command's options.
 
 ## Contributing

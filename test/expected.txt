@@ -640,6 +640,26 @@ Run 'barn help' for usage.
 $ barn version
 barn <version>
 
+## releases only
+$ barn hatch draft
+$ cd draft
+$ barn lay
+$ cd ..
+$ cd releases
+$ barn add acme/draft
+barn: acme/draft has no release; acme/draft:0.1.0_snapshot adds its newest snapshot
+[exit 1]
+$ barn add acme/draft:0.1.0
+barn: cannot resolve acme/app:
+  acme/draft:0.1.0 not found (wanted by the project)
+barn.pkg unchanged
+[exit 1]
+$ barn add acme/draft:0.1.0_snapshot
+installed 1 egg, no main.goose
+  acme/draft:0.1.0_snapshot_<stamp>_8ca24e4daabd
+added acme/draft:0.1.0_snapshot
+$ cd ..
+
 ## eggs folder
 $ barn hatch plain
 $ barn resolve plain

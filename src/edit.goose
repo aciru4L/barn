@@ -22,10 +22,12 @@ fn change_and_install(dir: const u8[:], eggs: const u8[:], original: const u8[:]
     return str("");
 }
 
-fn version_to_add(eggs: const u8[:], egg: const u8[:]) -> Version, bool {
-    let release, released = newest_release(eggs, egg);
-    guard !released else { return release, true; }
-    return newest_with_snapshot(eggs, egg);
+fn missing_release(eggs: const u8[:], egg: const u8[:]) -> u8[>..] {
+    let found, has_snapshots = newest_with_snapshot(eggs, egg);
+    guard has_snapshots else { return str(egg, " not found"); }
+    var newest = found;
+    newest.snapshot = NEWEST_SNAPSHOT;
+    return str(egg, " has no release; ", egg, ":", newest, " adds its newest snapshot");
 }
 
 fn add_to_project(p: Project, egg: const u8[:], v: Version, done: u8[>..]&) -> u8[>..] {
@@ -64,8 +66,8 @@ fn add(dir: const u8[:], eggs: const u8[:], specs: const u8[:][:], force: bool) 
             guard ok else { return str("bad version in '", spec, "'"); }
             v = parsed;
         } else {
-            let found, ok = version_to_add(eggs, egg);
-            guard ok else { return str(egg, " not found"); }
+            let found, released = newest_release(eggs, egg);
+            guard released else { return missing_release(eggs, egg); }
             v = found;
         }
         var next: u8[>..] = [];

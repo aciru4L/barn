@@ -16,6 +16,8 @@ All notable changes to Barn are recorded here. The format follows
   under `BARN_HOME`. The commands that install or lay eggs create it when it is missing.
   Snapshots sit beside their release as `0.1.0_snapshot_<stamp>_<hash>`, named by the time
   they were laid and their content.
+- `0.1.0` asks for that release only, never a snapshot of it; `0.1.0_snapshot` asks for the
+  newest snapshot.
 - Prebuilt executables for Linux, macOS and Windows on each GitHub release.
 - `barn build` and `barn run`, which stop when `barn.lock` does not match `barn.pkg` or
   `.barn/` does not match `barn.lock`, and otherwise hand the project to `goose build` or

@@ -297,6 +297,19 @@ scenario() {
     run barn help frob
     run barn version
 
+    section "releases only"
+    silently barn hatch draft
+    enter draft
+    silently barn lay
+    enter ..
+    mkdir releases
+    enter releases
+    write_pkg ''
+    run barn add acme/draft
+    run barn add acme/draft:0.1.0
+    run barn add acme/draft:0.1.0_snapshot
+    enter ..
+
     section "eggs folder"
     silently barn hatch plain
     export BARN_HOME="$work/other-home"

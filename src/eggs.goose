@@ -34,8 +34,7 @@ fn has_snapshot(eggs: const u8[:], egg: const u8[:], v: Version) -> bool {
 }
 
 fn concrete_version(eggs: const u8[:], egg: const u8[:], wanted: Version) -> Version {
-    guard !is_snapshot(wanted) else { return wanted; }
-    if is_release(wanted) && is_released(eggs, egg, wanted) { return wanted; }
+    guard wants_newest_snapshot(wanted) else { return wanted; }
     let snapshot = newest_snapshot(eggs, egg, wanted);
     if is_snapshot(snapshot) { return snapshot; }
     return wanted;
