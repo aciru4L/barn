@@ -11,17 +11,17 @@ it as `owner/repo`, or `host/owner/repo` outside GitHub.
 Barn refuses to install an egg that breaks these rules, and checks them before it lays one:
 
 - `name` in `barn.json` is the import name: a lowercase letter, then lowercase letters,
-  digits and `_`. `goose-linalg` is not a name, and Goose could not import it either;
-  `linalg` is.
+  digits and `_`. `goose-geometry` is not a name, and Goose could not import it either;
+  `geometry` is.
 - `<source>/<name>.goose` exists, `source` being `.` unless `barn.json` says otherwise.
 - That file declares `namespace <name>;`.
-- `version` in `barn.json` is `x.y.z`, and the tag is `v` followed by it: `v0.3.3` for
-  `0.3.3`.
-- The egg's files import dependencies by name only, as in `import fft;`. Their versions
+- `version` in `barn.json` is `x.y.z`, and the tag is `v` followed by it: `v1.2.0` for
+  `1.2.0`.
+- The egg's files import dependencies by name only, as in `import numbers;`. Their versions
   belong in `barn.json`, never in an import line.
 
-The repository may be named differently from the egg. `example/goose-linalg` can hold
-the egg `linalg`, which users then import as `linalg`.
+The repository may be named differently from the egg. `acme/goose-geometry` can hold
+the egg `geometry`, which users then import as `geometry`.
 
 ## Publishing with Barn
 
@@ -43,8 +43,8 @@ Tagging by hand skips the checks. Run them first:
 
 ```sh
 barn lay --check
-git tag v0.3.3
-git push origin v0.3.3
+git tag v1.2.0
+git push origin v1.2.0
 ```
 
 Or let a workflow check every release tag. For GitHub Actions:
@@ -82,7 +82,7 @@ broken.
 
 A released version never changes. Barn records the commit each tag pointed at when it was
 fetched, and refuses the tag if it later sees it pointing elsewhere. To fix a broken
-release, publish the next version: `0.3.4` after a broken `0.3.3`. Moving or deleting a
+release, publish the next version: `1.2.1` after a broken `1.2.0`. Moving or deleting a
 tag breaks every project that already uses it.
 
 A tag ruleset in the repository's settings that blocks updating and deleting `v*` tags

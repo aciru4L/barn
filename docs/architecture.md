@@ -18,7 +18,7 @@ writes the import lines Goose reads.
 | Stores packages | its own git cache | `~/.barn/eggs` |
 | Integrity | the ref in the import line | SHA-256 sums of every egg, checked before each build |
 
-Goose only ever sees ordinary path imports, such as `import linalg from "./.barn/linalg";`
+Goose only ever sees ordinary path imports, such as `import geometry from "./.barn/geometry";`
 in `main.goose`.
 
 ## Eggs
@@ -30,7 +30,7 @@ own `barn.json` declares:
 | Written in a dependency | Lives in | Imported as |
 |---|---|---|
 | `acme/numbers` | `github.com/acme/numbers` | `numbers` |
-| `example/goose-linalg` | `github.com/example/goose-linalg` | `linalg` |
+| `acme/goose-geometry` | `github.com/acme/goose-geometry` | `geometry` |
 | `gitlab.com/acme/stats` | `gitlab.com/acme/stats` | the `name` in its `barn.json` |
 
 The repository is the identity, so two different repositories can never be mistaken for
@@ -78,7 +78,7 @@ project/
   "local_priority": true,
   "dependencies": {
     "acme/numbers": "0.2.0",
-    "example/goose-linalg": "0.3.3"
+    "acme/goose-geometry": "1.2.0"
   },
   "overrides": {
     "acme/numbers": "../numbers"
