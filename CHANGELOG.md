@@ -28,7 +28,8 @@ All notable changes to Barn are recorded here. The format follows
   its imports as it does those of `main.goose`.
 - Eggs laid from the project folder, or from the folder `source` names: `<name>.goose` at
   its top, the other files under it, and `LICENSE` and `README`. Tests, examples, benches,
-  docs, dot-files, the main and test files and whatever `exclude` lists stay out.
+  docs, dot-files, the main and test files and whatever `exclude` lists stay out, and in a
+  git repository so do the files git ignores.
 - `barn hatch` makes an egg with `<name>.goose` at the top; `barn hatch --app` adds
   `main.goose`.
 

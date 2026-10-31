@@ -709,6 +709,26 @@ import layered from "../layered/lib";
 fn main() {}
 $ cd ..
 
+## git-ignored files
+$ barn hatch tracked
+$ cd tracked
+$ barn lay --release
+released acme/tracked:0.1.0  sha256:9565fa17f898f056e30fd7a801f518ee35262fe198687a55d9a8f36783622e78
+$ ls -A <work>/home/eggs/acme/tracked/0.1.0
+barn.json
+barn.sha256
+helper.goose
+tracked.goose
+$ ls -A
+.git
+.gitignore
+barn.json
+helper.goose
+scratch.goose
+test
+tracked.goose
+$ cd ..
+
 ## releases only
 $ barn hatch draft
 $ cd draft

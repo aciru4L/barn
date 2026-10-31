@@ -351,6 +351,18 @@ scenario() {
     show main.goose
     enter ..
 
+    section "git-ignored files"
+    silently barn hatch tracked
+    enter tracked
+    git init -q .
+    printf 'scratch.goose\n' >> .gitignore
+    printf 'fn main() {}\n' > scratch.goose
+    printf 'namespace tracked;\n' > helper.goose
+    run barn lay --release
+    run ls -A "$BARN_HOME/eggs/acme/tracked/0.1.0"
+    run ls -A
+    enter ..
+
     section "releases only"
     silently barn hatch draft
     enter draft

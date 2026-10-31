@@ -113,6 +113,7 @@ writes `main.goose`, for `barn run`.
 exist and declare `namespace <name>;`. These stay out:
 
 - dot-files and dot-folders, such as `.git` and `.barn`
+- in a git repository, the files git ignores, so the egg holds what the next commit could
 - built files ending in `.exe`, `.pdb`, `.ilk` or `.obj`
 - `barn.json`, which Barn writes into the egg itself, and `barn.lock`
 - the `main` and `test` files
