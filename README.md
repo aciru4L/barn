@@ -69,7 +69,7 @@ A project describes itself and its dependencies in `barn.json`:
 ```
 
 `barn.json` is strict JSON, with no comments or trailing commas. Besides `owner`, `name`,
-`version` and `dependencies`, it may set `main` and `test`, and `overrides`, which maps an
+`version` and `dependencies`, it may set `main` and `test`, `local_priority`, and `overrides`, which maps an
 egg to the version to use instead, or to a local folder starting with `./` or `../`.
 `add`, `remove` and `upgrade` rewrite the file in this layout.
 
@@ -157,6 +157,11 @@ never use the network. Barn runs `git`, so private repositories work with whatev
 releases in `~/.barn/eggs`. A repository that cannot be reached is a warning, and the
 releases already here are used. Releases never change: when a tag Barn has fetched now
 points at another commit than the one in `barn.origin`, Barn refuses it.
+
+A release already in `~/.barn/eggs` is used without asking the repository. With
+`"local_priority": false` in `barn.json`, or `--set local_priority=false` for one command,
+Barn asks the repository first and refuses the release if its tag has moved. `--offline`
+uses `~/.barn/eggs` only.
 
 A repository is fetched from `https://<host>/<owner>/<repo>`. `~/.barn/config.json` can
 point a host elsewhere, such as a mirror:

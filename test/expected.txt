@@ -599,6 +599,8 @@ options:
   --release         lay: tag the commit as a release, then offer to push the tag
   --check           lay: only check the egg and list what it would hold
   --flat            inspect: list the eggs instead of the tree
+  --offline         install, add, remove, upgrade: use ~/.barn/eggs only
+  --set KEY=VALUE   install, add, remove, upgrade: override local_priority in barn.json
   -- ...            build: goose's options; run, test: the program's arguments
   -h, --help        help for the command
 
@@ -918,6 +920,38 @@ barn: the tag v0.1.0 of acme/fetched now points at cd14b486423349617312187af8304
 $ barn install
 installed 1 egg
   acme/fetched:0.2.0
+$ barn install --set local_priority=false
+installed 1 egg
+  acme/fetched:0.2.0
+$ barn install
+installed 1 egg
+  acme/fetched:0.2.0
+$ barn install --set local_priority=false
+barn: the tag v0.2.0 of acme/fetched now points at 484f36cdb9382ad5783a3c4bf6d071da1969bf35, not cd14b486423349617312187af8304323fb8b3296: a release must never change
+[exit 1]
+$ barn install --offline --set local_priority=false
+installed 1 egg
+  acme/fetched:0.2.0
+$ barn install
+barn: the tag v0.2.0 of acme/fetched now points at 484f36cdb9382ad5783a3c4bf6d071da1969bf35, not cd14b486423349617312187af8304323fb8b3296: a release must never change
+[exit 1]
+$ barn install --set local_priority=true
+installed 1 egg
+  acme/fetched:0.2.0
+$ barn add acme/fetched --offline
+acme/fetched:0.2.0 unchanged
+--- barn.json
+{
+  "owner": "acme",
+  "name": "app",
+  "version": "0.1.0",
+  "local_priority": false,
+  "dependencies": {"acme/fetched": "0.2.0"}
+}
+$ barn install --set colour=red
+barn: --set supports local_priority=true and local_priority=false, not 'colour=red'
+Run 'barn help' for usage.
+[exit 2]
 $ barn install
 barn: cannot resolve acme/app:
   acme/fetched:0.9.0 not found (wanted by the project)

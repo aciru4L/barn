@@ -14,7 +14,11 @@ import src.release;
 let TAG_PREFIX = "refs/tags/v";
 let PEELED = "^{}";
 
-struct Network { fetches: bool = false, offline: bool = false, home: u8[>..] }
+struct Network { fetches: bool = false, offline: bool = false, priority: i64 = 0, home: u8[>..] }
+
+let PRIORITY_FROM_PACKAGE = 0;
+let LOCAL_FIRST = 1;
+let REMOTE_FIRST = 2;
 
 var network = Network { home: [] };
 
@@ -188,4 +192,31 @@ fn newest_known(versions: const Version[:], like: Version, compatible_only: bool
         }
     }
     return newest, found;
+}
+
+fn asks_repository_first(m: Manifest) -> bool {
+    guard network.priority == PRIORITY_FROM_PACKAGE else { return network.priority == REMOTE_FIRST; }
+    return m.remote_first;
+}
+
+fn check_with_repository(eggs: const u8[:], repo: const u8[:], v: Version) -> u8[>..] {
+    guard network.fetches && !network.offline && is_release(v) else { return str(""); }
+    var text: u8[>..] = [];
+    var tags: Tag[>..] = [];
+    let failed = remote_tags(eggs, repo, tags, text);
+    guard failed.len == 0 else {
+        write_stderr(str("warning: ", failed, "; using the release in ~/.barn/eggs\n"));
+        return str("");
+    }
+    let i = find_tag(tags[..], v);
+    guard i >= 0 else { return str(""); }
+    return moved_tag(eggs, repo, tags[i]);
+}
+
+fn apply_setting(setting: const u8[:]) -> u8[>..] {
+    guard setting == "local_priority=true" || setting == "local_priority=false" else {
+        return str("--set supports local_priority=true and local_priority=false, not '", setting, "'");
+    }
+    network.priority = if setting == "local_priority=true" { LOCAL_FIRST } else { REMOTE_FIRST };
+    return str("");
 }

@@ -480,6 +480,19 @@ scenario() {
     git -C ../remotes/acme/fetched tag -f v0.1.0 v0.2.0 > /dev/null
     run barn upgrade
     run barn install
+    first_commit="$(git -C ../fetched rev-parse HEAD~1)"
+    git -C ../remotes/acme/fetched tag -f v0.1.0 "$first_commit" > /dev/null
+    run barn install --set local_priority=false
+    git -C ../remotes/acme/fetched tag -f v0.2.0 "$first_commit" > /dev/null
+    run barn install
+    run barn install --set local_priority=false
+    run barn install --offline --set local_priority=false
+    write_pkg $'"local_priority": false,\n  "dependencies": {"acme/fetched": "0.2.0"}'
+    run barn install
+    run barn install --set local_priority=true
+    run barn add acme/fetched --offline
+    show barn.json
+    run barn install --set colour=red
     write_pkg '"dependencies": {"acme/fetched": "0.9.0"}'
     run barn install
     write_pkg '"dependencies": {"acme/missing": "0.1.0"}'
