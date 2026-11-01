@@ -261,8 +261,11 @@ folder, and uses git, when there is a repository, only to leave out ignored file
 Barn runs `git`, which also handles credentials for private repositories:
 
 - `git ls-remote --tags` lists the releases and the commit each tag points at.
-- A shallow clone at the tag or commit fetches the files, before Barn applies `source` and
+- A shallow clone at the tag fetches a release's files, before Barn applies `source` and
   the exclusions.
+- A snapshot comes from a clone with its history: `0.1.0_snapshot` is found by walking the
+  commits that changed `barn.json` on the default branch, and an exact snapshot by its hash,
+  whose commit time must be its stamp.
 - Every fetched egg is checked as `barn lay --check` would check it, and its `barn.json`
   version must match the tag. A broken egg fails with a message naming the egg and what is
   wrong, and its author fixes it in a new release.
