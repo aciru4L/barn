@@ -6,6 +6,8 @@ All notable changes to Barn are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-01
+
 ### Added
 
 - `barn hatch`, `install`, `add`, `remove`, `upgrade`, `verify`, `lay` and `inspect`, whose
@@ -60,10 +62,6 @@ All notable changes to Barn are recorded here. The format follows
   differs from `<owner>/<name>`. The eggs folder keeps them under their host.
 - `barn lay --check`, which checks the egg and lists its files without laying it, and a
   warning when a file in the egg names where a dependency comes from.
-
-### Fixed
-
-- `--owner` and `BARN_OWNER` are lowercased, with a warning, instead of being rejected.
-- Owners with uppercase letters, in `barn.json` or given to `add`, `remove` and `upgrade`, are
-  resolved as lowercase, with a warning. Egg names stay lowercase only, since they are folder
-  and import names; an uppercase one is an error that suggests the lowercase spelling.
+- Owners with uppercase letters, from `--owner`, `BARN_OWNER`, `barn.json` or `add`, `remove`
+  and `upgrade`, are lowercased with a warning. Egg names stay lowercase only, since they are
+  folder and import names; an uppercase one is an error that suggests the lowercase spelling.
