@@ -69,8 +69,9 @@ A project describes itself and its dependencies in `barn.json`:
 ```
 
 `barn.json` is strict JSON, with no comments or trailing commas. Besides `owner`, `name`,
-`version` and `dependencies`, it may set `main` and `test`, `local_priority`, and `overrides`, which maps an
-egg to the version to use instead, or to a local folder starting with `./` or `../`.
+`version` and `dependencies`, it may set `repo`, `main`, `test`, `source`, `exclude`,
+`local_priority` and `overrides`, which maps an egg to the version to use instead, or to a
+local folder starting with `./` or `../`.
 `add`, `remove` and `upgrade` rewrite the file in this layout.
 
 An egg is named by its repository: `acme/numbers` on GitHub, or `gitlab.com/acme/tools`
@@ -162,6 +163,10 @@ A release already in `~/.barn/eggs` is used without asking the repository. With
 `"local_priority": false` in `barn.json`, or `--set local_priority=false` for one command,
 Barn asks the repository first and refuses the release if its tag has moved. `--offline`
 uses `~/.barn/eggs` only.
+
+A repository without `barn.json` is a plain Goose library. Barn installs it as an egg with no
+dependencies, taking as its entry the one `<name>.goose` at the top that declares
+`namespace <name>;`, and writes a `barn.json` for it with that name and the tag's version.
 
 A repository is fetched from `https://<host>/<owner>/<repo>`. `~/.barn/config.json` can
 point a host elsewhere, such as a mirror:

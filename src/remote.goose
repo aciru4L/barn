@@ -10,6 +10,7 @@ import src.files;
 import src.git;
 import src.lay;
 import src.release;
+import src.package_edit;
 
 let TAG_PREFIX = "refs/tags/v";
 let PEELED = "^{}";
@@ -85,9 +86,42 @@ fn check_fetched(p: Project, repo: const u8[:], v: Version) -> u8[>..] {
     return str("");
 }
 
+fn plain_entries(clone: const u8[:], names: (const u8[:])[>..]&, listing: u8[>..]&) {
+    list_dir(clone, listing);
+    each_split(listing, '\n') { file =>
+        if ends_with(file, ".goose") && !is_dir(str(clone, "/", file)) {
+            let name = file[..file.len - 6];
+            var text: u8[>..] = [];
+            read_file(str(clone, "/", file), text);
+            if valid_name(name) && find(text, str("namespace ", name, ";")) >= 0 { names.push(name); }
+        }
+    };
+}
+
+fn plain_package(clone: const u8[:], repo: const u8[:], v: Version, text: u8[>..]&) -> u8[>..] {
+    var names: (const u8[:])[>..] = [];
+    var listing: u8[>..] = [];
+    plain_entries(clone, names, listing);
+    guard names.len == 1 else {
+        return str(repo, ":", v, " has no barn.json, and no single <name>.goose at its top declares ",
+                   "namespace <name>;: it needs a barn.json");
+    }
+    let parts = split(repo, '/');
+    let manifest = Manifest { egg: Dependency { name: repo, version: v }, owner: parts[parts.len - 2], name: names[0],
+                              repo: repo, .. };
+    let none: Dependency[>..] = [];
+    let no_overrides: Override[>..] = [];
+    let no_excludes: (const u8[:])[>..] = [];
+    text.append(package_text(manifest, none[..], no_overrides[..], no_excludes[..]));
+    return str("");
+}
+
 fn stage_fetched(clone: const u8[:], stage: const u8[:], repo: const u8[:], tag: Tag) -> u8[>..] {
     var text: u8[>..] = [];
-    guard read_file(str(clone, "/barn.json"), text) else { return str(repo, ":", tag.version, " has no barn.json"); }
+    if !read_file(str(clone, "/barn.json"), text) {
+        let missing = plain_package(clone, repo, tag.version, text);
+        guard missing.len == 0 else { return missing; }
+    }
     var problem: u8[>..] = [];
     let error = with_project_text(clone, text) { p =>
         problem.append(check_fetched(p, repo, tag.version));

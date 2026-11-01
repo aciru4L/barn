@@ -42,6 +42,8 @@ All notable changes to Barn are recorded here. The format follows
 - `add` and `upgrade` find releases on the repository too, and refuse a tag that has moved
   since it was fetched.
 - `"local_priority": false`, `--set local_priority=...` for one command, and `--offline`.
+- Plain Goose libraries without `barn.json` install as eggs with no dependencies, named
+  after the one `<name>.goose` at their top that declares `namespace <name>;`.
 - Eggs named by their repository, `acme/numbers` or `gitlab.com/acme/tools`, and imported
   under the `name` in their `barn.json`; `"repo"` says where a project lives when that
   differs from `<owner>/<name>`. The eggs folder keeps them under their host.

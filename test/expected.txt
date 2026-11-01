@@ -962,6 +962,31 @@ barn: cannot resolve acme/app:
   acme/missing:0.1.0 not found (wanted by the project)
 [exit 1]
 $ cd ..
+$ cd goose-plainlib
+$ cd ../goose-twolib
+$ cd ../consumer
+$ barn install
+fetched acme/goose-plainlib:1.0.0 from <work>/remotes/acme/goose-plainlib
+installed 1 egg, main.goose updated
+  acme/goose-plainlib:1.0.0
+--- <work>/elsewhere/eggs/github.com/acme/goose-plainlib/1.0.0/barn.json
+{
+  "owner": "acme",
+  "name": "plainlib",
+  "version": "1.0.0",
+  "repo": "acme/goose-plainlib",
+  "dependencies": {}
+}
+--- main.goose
+import plainlib from "./.barn/plainlib";
+
+fn main() { print(plainlib::honk()); }
+$ barn run
+honk from plainlib
+$ barn install
+barn: acme/goose-twolib:1.0.0 has no barn.json, and no single <name>.goose at its top declares namespace <name>;: it needs a barn.json
+[exit 1]
+$ cd ..
 
 ## releases only
 $ barn hatch draft

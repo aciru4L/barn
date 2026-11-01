@@ -498,6 +498,31 @@ scenario() {
     write_pkg '"dependencies": {"acme/missing": "0.1.0"}'
     run barn install
     enter ..
+    for library in goose-plainlib goose-twolib; do
+        mkdir "$library"
+        git init -q --bare "remotes/acme/$library"
+    done
+    enter goose-plainlib
+    printf 'namespace plainlib;\nfn honk() -> const u8[:] { return "honk from plainlib"; }\n' > plainlib.goose
+    printf 'namespace plainlib;\n' > helper.goose
+    commit_all
+    git tag v1.0.0
+    git push -q ../remotes/acme/goose-plainlib v1.0.0
+    enter ../goose-twolib
+    printf 'namespace first;\n' > first.goose
+    printf 'namespace second;\n' > second.goose
+    commit_all
+    git tag v1.0.0
+    git push -q ../remotes/acme/goose-twolib v1.0.0
+    enter ../consumer
+    printf 'fn main() { print(plainlib::honk()); }\n' > main.goose
+    write_pkg '"dependencies": {"acme/goose-plainlib": "1.0.0"}'
+    run barn install
+    show "$BARN_HOME/eggs/github.com/acme/goose-plainlib/1.0.0/barn.json" main.goose
+    without_goose_progress barn run
+    write_pkg '"dependencies": {"acme/goose-twolib": "1.0.0"}'
+    run barn install
+    enter ..
     export BARN_HOME="$work/home"
 
     section "releases only"
