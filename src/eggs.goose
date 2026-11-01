@@ -46,27 +46,6 @@ fn concrete_version(eggs: const u8[:], egg: const u8[:], wanted: Version) -> Ver
     return wanted;
 }
 
-fn newest_release(eggs: const u8[:], egg: const u8[:]) -> Version, bool {
-    var newest = Version {..};
-    var found = false;
-    each_version(eggs, egg) {
-        if is_released(eggs, egg, it) && (!found || is_newer(it, newest)) { newest = it; found = true; }
-    };
-    return newest, found;
-}
-
-fn newest_compatible_release(eggs: const u8[:], egg: const u8[:], like: Version) -> Version, bool {
-    var newest = Version {..};
-    var found = false;
-    each_version(eggs, egg) {
-        if compatible(it, like) && is_released(eggs, egg, it) && (!found || is_newer(it, newest)) {
-            newest = it;
-            found = true;
-        }
-    };
-    return newest, found;
-}
-
 fn newest_with_snapshot(eggs: const u8[:], egg: const u8[:]) -> Version, bool {
     var newest = Version {..};
     var found = false;

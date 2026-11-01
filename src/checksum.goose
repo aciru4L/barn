@@ -29,14 +29,6 @@ fn sums_hash(sums: const u8[:]) -> u8[>..] {
     return out;
 }
 
-fn egg_hash(dir: const u8[:]) -> u8[>..] {
-    var sums: u8[>..] = [];
-    file_sums(dir, sums);
-    return sums_hash(sums);
-}
-
-fn is_hash(text: const u8[:]) -> bool { starts_with(text, HASH_PREFIX) }
-
 fn read_sums(dir: const u8[:], sums: u8[>..]&) -> bool { read_file(str(dir, "/", SUM_FILE), sums) }
 
 fn sum_of(sums: const u8[:], path: const u8[:]) -> u8[>..], bool {
@@ -66,8 +58,4 @@ fn describe_changes(was: const u8[:], now: const u8[:], prefix: const u8[:], out
         let _, present = sum_of(was, path);
         if !present { format(out, "\n    ", prefix, path, " was added"); }
     };
-}
-
-fn describe_changes_since(was: const u8[:], hash: const u8[:], now: const u8[:], prefix: const u8[:], out: u8[>..]&) {
-    if was.len > 0 && sums_hash(was) == hash { describe_changes(was, now, prefix, out); }
 }

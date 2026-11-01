@@ -155,7 +155,6 @@ struct Manifest {
 
 fn dependencies_end(m: Manifest) -> i64 { m.first_dependency + m.dependency_count }
 fn overrides_end(m: Manifest) -> i64 { m.first_override + m.override_count }
-fn excludes_end(m: Manifest) -> i64 { m.first_exclude + m.exclude_count }
 fn source_of(m: Manifest) -> const u8[:] { if m.source.len > 0 { m.source } else { "." } }
 
 fn line_at(text: const u8[:], at: i64) -> i64 {
