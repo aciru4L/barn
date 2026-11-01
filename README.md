@@ -102,7 +102,9 @@ asks for and matches its sums in `~/.barn/eggs`, then hand the project's main fi
 on `PATH`. Each copy records the version it was installed from in `barn.egg`; for
 `0.1.0_snapshot`, any snapshot of 0.1.0 passes, and `barn install` looks for a newer one.
 After `--`, `build` passes options to `goose build` and `run` passes arguments to the
-program. Running `goose` directly skips these checks.
+program. Running `goose` directly skips these checks. A program that starts threads fails
+under `barn run`, because `goose run` runs it in process and cannot start threads yet. It
+works when built with `barn build` and run as an executable.
 
 `barn test` does the same checks, then runs `test/main_test.goose`, which `barn hatch`
 writes. It imports the egg from `..`, and a test fails by exiting with a status other than
