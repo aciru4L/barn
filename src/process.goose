@@ -1,7 +1,8 @@
 import std;
 
 extern "barn_run_program" fn run_program(arguments: const u8[:]) -> i64;
-extern "barn_run_program_into" fn run_program_into(arguments: const u8[:], output: const u8[:]) -> i64;
+extern "barn_run_program_into" fn run_program_into(arguments: const u8[:], output: const u8[:],
+                                                   errors: const u8[:]) -> i64;
 
 fn joined_arguments(arguments: const u8[:][:]) -> u8[>..] {
     var joined: u8[>..] = [];
@@ -11,8 +12,8 @@ fn joined_arguments(arguments: const u8[:][:]) -> u8[>..] {
 
 fn run_program(arguments: const u8[:][:]) -> i64 { run_program(joined_arguments(arguments)) }
 
-fn run_program_into(arguments: const u8[:][:], output: const u8[:]) -> i64 {
-    run_program_into(joined_arguments(arguments), output)
+fn run_program_into(arguments: const u8[:][:], output: const u8[:], errors: const u8[:]) -> i64 {
+    run_program_into(joined_arguments(arguments), output, errors)
 }
 
 extern "barn_make_writable" fn make_writable(path: const u8[:]) -> i64;

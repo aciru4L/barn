@@ -88,17 +88,23 @@ int64_t barn_set_env(barn_bytes name, barn_bytes value) {
     return set ? 1 : 0;
 }
 
-int64_t barn_run_program_into(barn_bytes arguments, barn_bytes output) {
-    wchar_t *line = command_line(arguments);
-    wchar_t *path = wide_text(output);
-    if (!line || !path) { free(line); free(path); return -1; }
+static HANDLE created_file(barn_bytes path) {
+    wchar_t *wide = wide_text(path);
+    if (!wide) return INVALID_HANDLE_VALUE;
     SECURITY_ATTRIBUTES inherit = { sizeof inherit, NULL, TRUE };
-    HANDLE out = CreateFileW(path, GENERIC_WRITE, 0, &inherit, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    HANDLE quiet = CreateFileW(L"NUL", GENERIC_WRITE, FILE_SHARE_WRITE, &inherit, OPEN_EXISTING, 0, NULL);
-    free(path);
-    if (out == INVALID_HANDLE_VALUE || quiet == INVALID_HANDLE_VALUE) {
+    HANDLE file = CreateFileW(wide, GENERIC_WRITE, 0, &inherit, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    free(wide);
+    return file;
+}
+
+int64_t barn_run_program_into(barn_bytes arguments, barn_bytes output, barn_bytes errors) {
+    wchar_t *line = command_line(arguments);
+    if (!line) return -1;
+    HANDLE out = created_file(output);
+    HANDLE err = created_file(errors);
+    if (out == INVALID_HANDLE_VALUE || err == INVALID_HANDLE_VALUE) {
         if (out != INVALID_HANDLE_VALUE) CloseHandle(out);
-        if (quiet != INVALID_HANDLE_VALUE) CloseHandle(quiet);
+        if (err != INVALID_HANDLE_VALUE) CloseHandle(err);
         free(line);
         return -1;
     }
@@ -106,10 +112,10 @@ int64_t barn_run_program_into(barn_bytes arguments, barn_bytes output) {
     startup.dwFlags = STARTF_USESTDHANDLES;
     startup.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
     startup.hStdOutput = out;
-    startup.hStdError = quiet;
+    startup.hStdError = err;
     int64_t code = run_with(line, &startup);
     CloseHandle(out);
-    CloseHandle(quiet);
+    CloseHandle(err);
     return code;
 }
 
@@ -170,16 +176,18 @@ int64_t barn_set_env(barn_bytes name, barn_bytes value) {
     return set;
 }
 
-int64_t barn_run_program_into(barn_bytes arguments, barn_bytes output) {
-    char *path = zero_terminated(output);
-    if (!path) return -1;
+int64_t barn_run_program_into(barn_bytes arguments, barn_bytes output, barn_bytes errors) {
+    char *out_path = zero_terminated(output);
+    char *error_path = zero_terminated(errors);
+    if (!out_path || !error_path) { free(out_path); free(error_path); return -1; }
     posix_spawn_file_actions_t actions;
     posix_spawn_file_actions_init(&actions);
-    posix_spawn_file_actions_addopen(&actions, 1, path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    posix_spawn_file_actions_addopen(&actions, 2, "/dev/null", O_WRONLY, 0);
+    posix_spawn_file_actions_addopen(&actions, 1, out_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    posix_spawn_file_actions_addopen(&actions, 2, error_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     int64_t code = spawn_and_wait(arguments, &actions);
     posix_spawn_file_actions_destroy(&actions);
-    free(path);
+    free(out_path);
+    free(error_path);
     return code;
 }
 #endif

@@ -118,8 +118,9 @@ fn remote_tags(eggs: const u8[:], repo: const u8[:], tags: Tag[>..]&, text: u8[>
     let url, failed = repo_url(repo);
     guard failed.len == 0 else { return failed; }
     let command: const u8[:][3] = ["ls-remote", "--tags", url[..]];
-    guard run_git(eggs, eggs, command[..], text) == 0 else {
-        return str("cannot list the tags of ", repo, " at ", url);
+    var errors: u8[>..] = [];
+    guard run_git_reporting(eggs, eggs, command[..], text, errors) == 0 else {
+        return str("cannot list the tags of ", repo, " at ", url, git_reason(errors));
     }
     each_split(text, '\n') { add_tag(tags, it); };
     return str("");
@@ -211,9 +212,10 @@ fn fetch_tag(eggs: const u8[:], repo: const u8[:], tag: Tag) -> u8[>..] {
     let name = release_tag(tag.version);
     let command: const u8[:][8] = ["clone", "-q", "--depth", "1", "--branch", name[..], url[..], clone[..]];
     var out: u8[>..] = [];
-    guard run_git(eggs, eggs, command[..], out) == 0 else {
+    var errors: u8[>..] = [];
+    guard run_git_reporting(eggs, eggs, command[..], out, errors) == 0 else {
         delete_tree(clone);
-        return str("cannot fetch ", repo, ":", tag.version, " from ", url);
+        return str("cannot fetch ", repo, ":", tag.version, " from ", url, git_reason(errors));
     }
     return store_clone(eggs, repo, clone, tag, url);
 }
@@ -402,10 +404,11 @@ fn fetch_snapshot(eggs: const u8[:], repo: const u8[:], wanted: Version) -> Snap
     let clone = clone_path(eggs, repo);
     let command: const u8[:][5] = ["clone", "-q", "--no-checkout", url[..], clone[..]];
     var out: u8[>..] = [];
-    guard run_git(eggs, eggs, command[..], out) == 0 else {
+    var errors: u8[>..] = [];
+    guard run_git_reporting(eggs, eggs, command[..], out, errors) == 0 else {
         delete_tree(clone);
         result.unreachable = true;
-        format(result.message, "cannot fetch the snapshots of ", repo, " from ", url);
+        format(result.message, "cannot fetch the snapshots of ", repo, " from ", url, git_reason(errors));
         return result;
     }
     let commit = if is_snapshot(wanted) { exact_commit(clone, eggs, wanted) }
@@ -416,9 +419,10 @@ fn fetch_snapshot(eggs: const u8[:], repo: const u8[:], wanted: Version) -> Snap
     guard !is_dir(egg_dir(eggs, repo, snapshot)) else { delete_tree(clone); return result; }
     let checkout: const u8[:][3] = ["checkout", "-q", commit[..]];
     var ignored: u8[>..] = [];
-    guard run_git(clone, eggs, checkout[..], ignored) == 0 else {
+    var checkout_errors: u8[>..] = [];
+    guard run_git_reporting(clone, eggs, checkout[..], ignored, checkout_errors) == 0 else {
         delete_tree(clone);
-        format(result.message, "cannot check out ", commit, " of ", repo);
+        format(result.message, "cannot check out ", commit, " of ", repo, git_reason(checkout_errors));
         return result;
     }
     result.message.append(store_clone(eggs, repo, clone, Tag { version: snapshot, commit: commit }, url));

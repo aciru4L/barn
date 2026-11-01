@@ -69,3 +69,4 @@ All notable changes to Barn are recorded here. The format follows
   and import names; an uppercase one is an error that suggests the lowercase spelling.
 - Fetching no longer fails with a deep `BARN_HOME` on Windows: the temporary folders have
   short names, and `git` runs with `core.longpaths` on.
+- A failed fetch says why, with the reason `git` gave.
