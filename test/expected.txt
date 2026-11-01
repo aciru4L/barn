@@ -95,13 +95,13 @@ fn main() {
     }
 }
 $ barn upgrade
-warning: cannot list the tags of acme/numbers at <work>/remotes/acme/numbers (git: '<work>/remotes/acme/numbers' does not appear to be a git repository); using the releases in ~/.barn/eggs
+warning: cannot list the tags of acme/numbers at <work>/remotes/acme/numbers (git: <reason>); using the releases in ~/.barn/eggs
 installed 1 egg
   acme/numbers:0.1.1
 acme/numbers: 0.1.0 -> 0.1.1
 acme/numbers:0.2.0 available (incompatible)
 $ barn add acme/numbers
-warning: cannot list the tags of acme/numbers at <work>/remotes/acme/numbers (git: '<work>/remotes/acme/numbers' does not appear to be a git repository); using the releases in ~/.barn/eggs
+warning: cannot list the tags of acme/numbers at <work>/remotes/acme/numbers (git: <reason>); using the releases in ~/.barn/eggs
 installed 1 egg
   acme/numbers:0.2.0
 acme/numbers: 0.1.1 -> 0.2.0 (incompatible)
@@ -119,7 +119,7 @@ acme/numbers:0.2.0_snapshot_<stamp>_8fe19135c713
 $ barn add acme/numbers:0.2.0_snapshot
 acme/numbers:0.2.0_snapshot unchanged
 $ barn add acme/nothing
-warning: cannot list the tags of acme/nothing at <work>/remotes/acme/nothing (git: '<work>/remotes/acme/nothing' does not appear to be a git repository); using the releases in ~/.barn/eggs
+warning: cannot list the tags of acme/nothing at <work>/remotes/acme/nothing (git: <reason>); using the releases in ~/.barn/eggs
 barn: acme/nothing not found
 [exit 1]
 $ barn add nothing
@@ -301,7 +301,7 @@ released acme/stats:0.1.0  sha256:6ca3d46489592d3d77dd015c26edc2a318c0634a15c11d
 v0.1.0 stays on this machine: there is no origin to push it to
 $ cd ../app
 $ barn add acme/stats
-warning: cannot list the tags of acme/stats at <work>/remotes/acme/stats (git: '<work>/remotes/acme/stats' does not appear to be a git repository); using the releases in ~/.barn/eggs
+warning: cannot list the tags of acme/stats at <work>/remotes/acme/stats (git: <reason>); using the releases in ~/.barn/eggs
 installed 2 eggs, main.goose updated, test/main_test.goose updated
   acme/stats:0.1.0
   acme/numbers:0.1.0
@@ -339,7 +339,7 @@ removed acme/stats:0.1.0
   }
 }
 $ barn add acme/stats acme/numbers:0.1.1
-warning: cannot list the tags of acme/stats at <work>/remotes/acme/stats (git: '<work>/remotes/acme/stats' does not appear to be a git repository); using the releases in ~/.barn/eggs
+warning: cannot list the tags of acme/stats at <work>/remotes/acme/stats (git: <reason>); using the releases in ~/.barn/eggs
 installed 2 eggs, main.goose updated
   acme/stats:0.1.0
   acme/numbers:0.1.1
@@ -384,7 +384,7 @@ $ barn verify
 verified 0 eggs
 $ barn run
 $ barn add acme/stats
-warning: cannot list the tags of acme/stats at <work>/remotes/acme/stats (git: '<work>/remotes/acme/stats' does not appear to be a git repository); using the releases in ~/.barn/eggs
+warning: cannot list the tags of acme/stats at <work>/remotes/acme/stats (git: <reason>); using the releases in ~/.barn/eggs
 installed 2 eggs, main.goose updated
   acme/numbers:0.2.0  (../numbers)
   acme/stats:0.1.0
@@ -435,7 +435,7 @@ $ ls .barn
 numbers
 $ barn add ACME/stats
 warning: owner 'ACME' is not lowercase: using 'acme'
-warning: cannot list the tags of acme/stats at <work>/remotes/acme/stats (git: '<work>/remotes/acme/stats' does not appear to be a git repository); using the releases in ~/.barn/eggs
+warning: cannot list the tags of acme/stats at <work>/remotes/acme/stats (git: <reason>); using the releases in ~/.barn/eggs
 warning: owner 'Acme' is not lowercase: using 'acme'
 installed 2 eggs, main.goose updated
   acme/numbers:0.1.1
@@ -445,7 +445,7 @@ $ barn add acme/Stats
 barn: bad repository name in 'acme/Stats': use lowercase letters, digits, -, _ and .; say 'stats'
 [exit 1]
 $ barn upgrade numbers
-warning: cannot list the tags of acme/numbers at <work>/remotes/acme/numbers (git: '<work>/remotes/acme/numbers' does not appear to be a git repository); using the releases in ~/.barn/eggs
+warning: cannot list the tags of acme/numbers at <work>/remotes/acme/numbers (git: <reason>); using the releases in ~/.barn/eggs
 installed 2 eggs
   acme/numbers:0.1.1
   acme/stats:0.1.0
@@ -783,8 +783,8 @@ gitlab.com
 tools
 $ cd repos
 $ barn add acme/goose-geometry gitlab.com/acme/tools github.com/acme/numbers:0.1.0
-warning: cannot list the tags of acme/goose-geometry at <work>/remotes/acme/goose-geometry (git: '<work>/remotes/acme/goose-geometry' does not appear to be a git repository); using the releases in ~/.barn/eggs
-warning: cannot list the tags of gitlab.com/acme/tools at <work>/remotes/acme/tools (git: '<work>/remotes/acme/tools' does not appear to be a git repository); using the releases in ~/.barn/eggs
+warning: cannot list the tags of acme/goose-geometry at <work>/remotes/acme/goose-geometry (git: <reason>); using the releases in ~/.barn/eggs
+warning: cannot list the tags of gitlab.com/acme/tools at <work>/remotes/acme/tools (git: <reason>); using the releases in ~/.barn/eggs
 installed 3 eggs, main.goose updated
   acme/goose-geometry:0.1.0
   gitlab.com/acme/tools:0.1.0
@@ -819,7 +819,7 @@ geometry
 numbers
 tools
 $ barn add acme/geometry-two
-warning: cannot list the tags of acme/geometry-two at <work>/remotes/acme/geometry-two (git: '<work>/remotes/acme/geometry-two' does not appear to be a git repository); using the releases in ~/.barn/eggs
+warning: cannot list the tags of acme/geometry-two at <work>/remotes/acme/geometry-two (git: <reason>); using the releases in ~/.barn/eggs
 barn: cannot resolve acme/app:
   acme/goose-geometry and acme/geometry-two are both imported as 'geometry'
 barn.json unchanged
@@ -958,7 +958,7 @@ barn: cannot resolve acme/app:
   acme/fetched:0.9.0 not found (wanted by the project)
 [exit 1]
 $ barn install
-warning: cannot list the tags of acme/missing at <work>/remotes/acme/missing (git: '<work>/remotes/acme/missing' does not appear to be a git repository)
+warning: cannot list the tags of acme/missing at <work>/remotes/acme/missing (git: <reason>)
 barn: cannot resolve acme/app:
   acme/missing:0.1.0 not found (wanted by the project)
 [exit 1]
@@ -1023,11 +1023,11 @@ barn: cannot resolve acme/app:
   acme/fetched:0.1.0_snapshot_<stamp>_000000000000 not found (wanted by the project)
 [exit 1]
 $ barn install
-warning: cannot fetch the snapshots of acme/fetched from <work>/remotes/acme/fetched (git: '<work>/remotes/acme/fetched' does not appear to be a git repository); using acme/fetched:0.2.0_snapshot_<stamp>_00ab3e4bc01c, which may be stale
+warning: cannot fetch the snapshots of acme/fetched from <work>/remotes/acme/fetched (git: <reason>); using acme/fetched:0.2.0_snapshot_<stamp>_00ab3e4bc01c, which may be stale
 installed 1 egg
   acme/fetched:0.2.0_snapshot_<stamp>_00ab3e4bc01c
 $ barn install
-warning: cannot fetch the snapshots of acme/missing from <work>/remotes/acme/missing (git: '<work>/remotes/acme/missing' does not appear to be a git repository)
+warning: cannot fetch the snapshots of acme/missing from <work>/remotes/acme/missing (git: <reason>)
 barn: cannot resolve acme/app:
   no snapshot of acme/missing:0.1.0 (wanted by the project)
 [exit 1]
@@ -1052,11 +1052,11 @@ $ barn lay
 $ cd ..
 $ cd releases
 $ barn add acme/draft
-warning: cannot list the tags of acme/draft at <work>/remotes/acme/draft (git: '<work>/remotes/acme/draft' does not appear to be a git repository); using the releases in ~/.barn/eggs
+warning: cannot list the tags of acme/draft at <work>/remotes/acme/draft (git: <reason>); using the releases in ~/.barn/eggs
 barn: acme/draft has no release; acme/draft:0.1.0_snapshot adds its newest snapshot
 [exit 1]
 $ barn add acme/draft:0.1.0
-warning: cannot list the tags of acme/draft at <work>/remotes/acme/draft (git: '<work>/remotes/acme/draft' does not appear to be a git repository)
+warning: cannot list the tags of acme/draft at <work>/remotes/acme/draft (git: <reason>)
 barn: cannot resolve acme/app:
   acme/draft:0.1.0 not found (wanted by the project)
 barn.json unchanged
