@@ -65,3 +65,5 @@ All notable changes to Barn are recorded here. The format follows
 - Owners with uppercase letters, from `--owner`, `BARN_OWNER`, `barn.json` or `add`, `remove`
   and `upgrade`, are lowercased with a warning. Egg names stay lowercase only, since they are
   folder and import names; an uppercase one is an error that suggests the lowercase spelling.
+- A failed fetch says why, with the reason `git` gave. Fetching works with a deep `BARN_HOME`
+  on Windows: the temporary folders have short names, and `git` runs with `core.longpaths` on.

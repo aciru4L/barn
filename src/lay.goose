@@ -151,7 +151,7 @@ fn lay_project(p: Project, eggs: const u8[:], release: bool, yes: bool) -> u8[>.
     }
     let folder = egg_folder(eggs, egg.name);
     guard make_dirs(folder) || is_dir(folder) else { return str("cannot create ", folder); }
-    let stage = str(folder, "/.laying-", time_ns(), "-", random_seed());
+    let stage = scratch_path(folder, "lay");
     var sums: u8[>..] = [];
     guard stage_egg(p, stage, sums) else { return str("cannot copy the egg into ", stage); }
     guard !release else { return release_staged(p, eggs, stage, sums, yes); }

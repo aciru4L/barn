@@ -604,7 +604,7 @@ scenario() {
 
 normalize() {
     sed -e "s|$work_native|<work>|g" -e "s|$root_native|<root>|g" -e "s|$root|<root>|g" -e "s|$work|<work>|g" -e 's/[0-9]\{8\}T[0-9]\{6\}Z/<stamp>/g' \
-        -e "s/^barn $version\$/barn <version>/"
+        -e "s/^barn $version\$/barn <version>/" -e 's/(git: [^)]*)/(git: <reason>)/g'
 }
 
 actual="$(scenario | normalize)"
