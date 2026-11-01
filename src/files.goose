@@ -1,5 +1,6 @@
 import std;
 import os;
+import src.process;
 
 fn left_out(name: const u8[:]) -> bool {
     name[0] == '.' || ends_with(name, ".exe") || ends_with(name, ".pdb") || ends_with(name, ".ilk") ||
@@ -51,13 +52,15 @@ fn copy_tree(from: const u8[:], to: const u8[:]) -> bool {
     return listed && copied;
 }
 
+fn remove_file(path: const u8[:]) -> bool { delete_file(path) || (make_writable(path) != 0 && delete_file(path)) }
+
 fn delete_tree(path: const u8[:]) -> bool {
-    guard is_dir(path) else { return !file_exists(path) || delete_file(path); }
+    guard is_dir(path) else { return !file_exists(path) || remove_file(path); }
     var folders: u8[>..] = [];
     var folder_ends: i64[>..] = [];
     let listed = walk(path, true) { inner, is_folder =>
         if is_folder { folders.append(inner); folder_ends.push(folders.len); }
-        else { delete_file(str(path, "/", inner)); }
+        else { remove_file(str(path, "/", inner)); }
     };
     guard listed else { return false; }
     var i = folder_ends.len - 1;

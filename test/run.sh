@@ -444,6 +444,36 @@ scenario() {
     run barn lay --release
     enter ..
 
+    section "fetching"
+    mkdir -p remotes/acme
+    git init -q --bare remotes/acme/fetched
+    silently barn hatch fetched
+    enter fetched
+    commit_all
+    git remote add origin ../remotes/acme/fetched
+    silently barn lay --release -y
+    enter ..
+    export BARN_HOME="$work/elsewhere"
+    mkdir elsewhere
+    printf '{"hosts": {"github.com": {"url": "%s/remotes"}}}\n' "$work_native" > elsewhere/config.json
+    mkdir consumer
+    enter consumer
+    printf 'fn main() {}\n' > main.goose
+    write_pkg '"dependencies": {"acme/fetched": "0.1.0"}'
+    run barn inspect
+    run barn install
+    run ls -A "$BARN_HOME/eggs/github.com/acme/fetched"
+    run ls -A "$BARN_HOME/eggs/github.com/acme/fetched/0.1.0"
+    show "$BARN_HOME/eggs/github.com/acme/fetched/0.1.0/barn.origin"
+    run barn install
+    run barn verify
+    write_pkg '"dependencies": {"acme/fetched": "0.9.0"}'
+    run barn install
+    write_pkg '"dependencies": {"acme/missing": "0.1.0"}'
+    run barn install
+    enter ..
+    export BARN_HOME="$work/home"
+
     section "releases only"
     silently barn hatch draft
     enter draft

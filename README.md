@@ -22,9 +22,8 @@ A package manager for [Goose](https://github.com/aardappel/goose). Packages are
 | ✅ | Local eggs folder with immutable releases and snapshots named by time and content |
 | ✅ | Dependency tree and flat listing with `barn inspect` and `barn inspect --flat` |
 | ✅ | Prebuilt executables for Linux, macOS and Windows |
-| ❌ | Remote / hosted registry |
-| ❌ | Publishing and sharing eggs with others |
-| ❌ | Dependencies fetched straight from Git or a URL |
+| ✅ | Publishing eggs as git tags, and fetching releases from their git repository |
+| ❌ | Fetching snapshots straight from commits |
 | ❌ | Searching and browsing available eggs |
 | ❌ | Signed releases and yanking bad versions |
 | ❌ | A stable `barn.json` format |
@@ -144,6 +143,26 @@ release in `~/.barn/eggs` with a `barn.origin` file naming the repository, tag a
 and then asks before running `git push origin v<version>`; `-y` answers yes. Answering no,
 or having no `origin`, keeps the release on this machine, and pushing the tag later
 publishes the same files. A plain `barn lay` needs no git and no commit.
+
+## Fetching
+
+`install`, `add`, `remove` and `upgrade` fetch a release that is not in `~/.barn/eggs` from
+its git repository: `git ls-remote --tags` finds the tag `v<version>`, and a shallow clone
+of it is checked as `barn lay --check` would check it, then stored with a `barn.origin`
+file naming the repository, tag and commit. `verify`, `build`, `run`, `test` and `inspect`
+never use the network. Barn runs `git`, so private repositories work with whatever access
+`git` already has.
+
+A repository is fetched from `https://<host>/<owner>/<repo>`. `~/.barn/config.json` can
+point a host elsewhere, such as a mirror:
+
+```json
+{
+  "hosts": {
+    "github.com": { "url": "https://mirror.example.org/github" }
+  }
+}
+```
 
 ## The eggs folder
 

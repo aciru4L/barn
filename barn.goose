@@ -9,6 +9,7 @@ import src.install;
 import src.edit;
 import src.build;
 import src.files;
+import src.remote;
 
 let VERSION = "0.1.0";
 
@@ -213,6 +214,8 @@ fn run(command: const u8[:], argv: u8[:][:]) -> u8[>..] {
     check_argument_count(command, arguments.len);
     var eggs: u8[>..] = [];
     guard barn_home(eggs) else { return str("no home folder: set BARN_HOME"); }
+    network.home.append(eggs);
+    network.fetches = moves_eggs(command) && command != "lay";
     eggs.append("/eggs");
     let creates_eggs = moves_eggs(command) && !flags.check;
     guard !creates_eggs || is_dir(eggs) || make_dirs(eggs) else { return str("cannot create ", eggs); }

@@ -858,6 +858,47 @@ barn: origin already has the tag v0.2.0
 [exit 1]
 $ cd ..
 
+## fetching
+$ barn hatch fetched
+$ cd fetched
+$ barn lay --release -y
+$ cd ..
+$ cd consumer
+$ barn inspect
+barn: cannot resolve acme/app:
+  acme/fetched:0.1.0 not found (wanted by the project)
+[exit 1]
+$ barn install
+fetched acme/fetched:0.1.0 from <work>/remotes/acme/fetched
+installed 1 egg, main.goose updated
+  acme/fetched:0.1.0
+$ ls -A <work>/elsewhere/eggs/github.com/acme/fetched
+0.1.0
+$ ls -A <work>/elsewhere/eggs/github.com/acme/fetched/0.1.0
+barn.json
+barn.origin
+barn.sha256
+fetched.goose
+--- <work>/elsewhere/eggs/github.com/acme/fetched/0.1.0/barn.origin
+{
+  "repo": "acme/fetched",
+  "tag": "v0.1.0",
+  "commit": "484f36cdb9382ad5783a3c4bf6d071da1969bf35"
+}
+$ barn install
+installed 1 egg
+  acme/fetched:0.1.0
+$ barn verify
+verified 1 egg
+$ barn install
+barn: cannot resolve acme/app:
+  acme/fetched:0.9.0 not found (wanted by the project)
+[exit 1]
+$ barn install
+barn: cannot list the tags of acme/missing at <work>/remotes/acme/missing
+[exit 1]
+$ cd ..
+
 ## releases only
 $ barn hatch draft
 $ cd draft
@@ -868,8 +909,7 @@ $ barn add acme/draft
 barn: acme/draft has no release; acme/draft:0.1.0_snapshot adds its newest snapshot
 [exit 1]
 $ barn add acme/draft:0.1.0
-barn: cannot resolve acme/app:
-  acme/draft:0.1.0 not found (wanted by the project)
+barn: cannot list the tags of acme/draft at https://github.com/acme/draft
 barn.json unchanged
 [exit 1]
 $ barn add acme/draft:0.1.0_snapshot

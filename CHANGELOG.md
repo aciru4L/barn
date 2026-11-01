@@ -37,6 +37,8 @@ All notable changes to Barn are recorded here. The format follows
 - `barn lay --release` tags the commit `v<version>` in a git repository with nothing left to
   commit, stores the release with a `barn.origin` file and asks before pushing the tag to
   `origin`. Without `origin`, or when the answer is no, the release stays on this machine.
+- `install`, `add`, `remove` and `upgrade` fetch missing releases from their git repository,
+  and `~/.barn/config.json` can point a host at a mirror.
 - Eggs named by their repository, `acme/numbers` or `gitlab.com/acme/tools`, and imported
   under the `name` in their `barn.json`; `"repo"` says where a project lives when that
   differs from `<owner>/<name>`. The eggs folder keeps them under their host.

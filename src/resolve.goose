@@ -4,6 +4,7 @@ import dictionary;
 import src.version;
 import src.manifest;
 import src.eggs;
+import src.remote;
 
 struct Node {
     egg: const u8[:], name: const u8[:], version: Version, manifest: i64, source: const u8[:], override: i64 = -1,
@@ -64,6 +65,10 @@ fn resolve<F>(dir: const u8[:], eggs: const u8[:]) -> u8[>..] {
     fn load_egg(egg: const u8[:], v: Version) -> i64 {
         guard !wants_newest_snapshot(v) else { return -1; }
         let path = str(egg_dir(eggs, egg, v), "/barn.json");
+        if !file_exists(path) {
+            let failed = fetch_release(eggs, egg, v);
+            guard failed.len == 0 else { fail(failed); }
+        }
         guard file_exists(path) else { return -1; }
         let index = load_file(path);
         let found = manifests[index].egg;
