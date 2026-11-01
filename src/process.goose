@@ -16,3 +16,4 @@ fn run_program_into(arguments: const u8[:][:], output: const u8[:]) -> i64 {
 }
 
 extern "barn_make_writable" fn make_writable(path: const u8[:]) -> i64;
+extern "barn_set_env" fn set_env(name: const u8[:], value: const u8[:]) -> i64;

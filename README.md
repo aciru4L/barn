@@ -22,8 +22,7 @@ A package manager for [Goose](https://github.com/aardappel/goose). Packages are
 | ✅ | Local eggs folder with immutable releases and snapshots named by time and content |
 | ✅ | Dependency tree and flat listing with `barn inspect` and `barn inspect --flat` |
 | ✅ | Prebuilt executables for Linux, macOS and Windows |
-| ✅ | Publishing eggs as git tags, and fetching releases from their git repository |
-| ❌ | Fetching snapshots straight from commits |
+| ✅ | Publishing eggs as git tags, and fetching releases and snapshots from their git repository |
 | ❌ | Searching and browsing available eggs |
 | ❌ | Signed releases and yanking bad versions |
 | ❌ | A stable `barn.json` format |
@@ -152,7 +151,7 @@ its git repository: `git ls-remote --tags` finds the tag `v<version>`, and a sha
 of it is checked as `barn lay --check` would check it, then stored with a `barn.origin`
 file naming the repository, tag and commit. `verify`, `build`, `run`, `test` and `inspect`
 never use the network. Barn runs `git`, so private repositories work with whatever access
-`git` already has.
+`git` already has, or with a token in `~/.barn/config.json`.
 
 `add` without a version and `upgrade` look at the tags on the repository as well as the
 releases in `~/.barn/eggs`. A repository that cannot be reached is a warning, and the
@@ -164,6 +163,13 @@ A release already in `~/.barn/eggs` is used without asking the repository. With
 Barn asks the repository first and refuses the release if its tag has moved. `--offline`
 uses `~/.barn/eggs` only.
 
+A snapshot that is not in `~/.barn/eggs` is fetched from a commit. `0.1.0_snapshot` is the
+newest commit on the default branch whose `barn.json` says `0.1.0`, and
+`0.1.0_snapshot_<stamp>_<hash>` is the commit with that hash, as long as its commit time is
+the stamp and its `barn.json` says `0.1.0`. A snapshot laid on this machine comes before the
+repository's for `0.1.0_snapshot`, unless local priority is off. When the repository cannot
+be reached, the newest snapshot already here is used, with a warning that it may be stale.
+
 A release changed in `~/.barn/eggs` is an error; `barn install --force` fetches it again
 from its repository, as long as its tag still points at the commit in `barn.origin`.
 
@@ -172,15 +178,20 @@ dependencies, taking as its entry the one `<name>.goose` at the top that declare
 `namespace <name>;`, and writes a `barn.json` for it with that name and the tag's version.
 
 A repository is fetched from `https://<host>/<owner>/<repo>`. `~/.barn/config.json` can
-point a host elsewhere, such as a mirror:
+point a host elsewhere, such as a mirror, and give it a token for private repositories:
 
 ```json
 {
   "hosts": {
-    "github.com": { "url": "https://mirror.example.org/github" }
+    "github.com": { "url": "https://mirror.example.org/github" },
+    "gitlab.com": { "user": "oauth2", "token": "glpat-..." }
   }
 }
 ```
+
+The token goes to that host only, as HTTP basic authentication with `user`, which is
+`x-access-token` when it is not given, as GitHub expects. Barn passes it to `git` in the
+environment, never on the command line.
 
 ## The eggs folder
 
@@ -188,12 +199,19 @@ Barn keeps its eggs in `~/.barn/eggs`, or in `eggs/` under `BARN_HOME` when that
 `install`, `add`, `remove`, `upgrade` and `lay` create the folder when it is missing; the
 other commands only read it. A release lives in `github.com/acme/numbers/0.1.0/`, host
 first, and each snapshot beside it in `0.1.0_snapshot_<stamp>_<hash>/`: the UTC time it was
-laid and the first 12 hex digits of its content hash. Laying unchanged content again reports the
+laid and the first 12 hex digits of its content hash, or for a fetched snapshot its commit
+time and the first 12 hex digits of the commit hash. Laying unchanged content again reports the
 snapshot it already is.
 
 In `barn.json`, `0.1.0` means that release and nothing else, `0.1.0_snapshot` the newest
 snapshot of it, and `0.1.0_snapshot_<stamp>_<hash>` that one snapshot. `barn add` without a
 version picks the newest release.
+
+## Further reading
+
+- [Publishing an egg](docs/publishing.md): releasing, snapshots, CI checks and private eggs.
+- [How Barn works](docs/architecture.md): how Barn chooses versions, stores and checks eggs,
+  and fetches them.
 
 ## Contributing
 

@@ -1,8 +1,8 @@
-# Barn architecture
+# How Barn works
 
-> [!NOTE]
-> This is Barn's design, and Barn implements it except for what [Not built yet](#not-built-yet)
-> lists. [README.md](../README.md) describes the commands as they work today.
+This is the reference for what Barn does behind its commands: how it names, chooses,
+stores, checks and fetches eggs. [README.md](../README.md) introduces the commands, and
+[Publishing an egg](publishing.md) is the guide for egg authors.
 
 ## Barn and Goose
 
@@ -157,6 +157,18 @@ Minimal version selection picks one version of each egg from the `barn.json` fil
 tree. The same files always give the same versions, whatever is newest on a remote, except
 where a file asks for `_snapshot`, which means whatever is newest. Barn has no lock file.
 
+Each egg gets the highest version asked for anywhere in the tree, as long as every request
+is compatible with it:
+
+| Requests | Compatible when | Example |
+|---|---|---|
+| `1.0.0` and up | the major version matches | `1.2.0` and `1.4.1` give `1.4.1`; `1.4.1` and `2.0.0` are an error |
+| `0.x.y`, x above 0 | the minor version matches | `0.2.0` and `0.2.3` give `0.2.3`; `0.2.3` and `0.3.0` are an error |
+| `0.0.z` | the versions are equal | `0.0.1` and `0.0.2` are an error |
+
+An error names the eggs that asked for each version. A project settles it by upgrading the
+egg that asks for the older one, or with an entry in its `overrides`.
+
 ### Fixed versions
 
 Releases and exact snapshots never change. A copy that is present is checked against its
@@ -171,8 +183,11 @@ stored sums, and with `local_priority` true it is used without the network.
 With `local_priority` false, a repository that has the version must match the copy, or it
 is an error. When it does not have the version, or cannot be reached, the copy is used.
 
-A changed copy that was fetched is fetched again by `barn install --force`. A changed copy
-laid on this machine has nowhere to come from: delete it and lay it again. When nothing has
+A changed copy that was fetched is fetched again by `barn install --force`. A changed
+snapshot laid on this machine has nowhere to come from: delete it and lay it again. A
+release made with `barn lay --release` but never pushed has nowhere to come from either:
+delete its folder in `~/.barn/eggs` and its tag, with `git tag -d v<version>`, and release it
+again. When nothing has
 the version, the install fails and says where Barn looked.
 
 ### Newest snapshot
@@ -258,11 +273,14 @@ folder, and uses git, when there is a repository, only to leave out ignored file
 
 ## Fetching
 
-Barn runs `git`, which also handles credentials for private repositories:
+Barn runs `git`, with a token from [config.json](#configjson) or the credentials `git` has:
 
 - `git ls-remote --tags` lists the releases and the commit each tag points at.
-- A shallow clone at the tag or commit fetches the files, before Barn applies `source` and
+- A shallow clone at the tag fetches a release's files, before Barn applies `source` and
   the exclusions.
+- A snapshot comes from a clone with its history: `0.1.0_snapshot` is found by walking the
+  commits that changed `barn.json` on the default branch, and an exact snapshot by its hash,
+  whose commit time must be its stamp.
 - Every fetched egg is checked as `barn lay --check` would check it, and its `barn.json`
   version must match the tag. A broken egg fails with a message naming the egg and what is
   wrong, and its author fixes it in a new release.
@@ -272,43 +290,16 @@ Barn runs `git`, which also handles credentials for private repositories:
 ```json
 {
   "hosts": {
-    "github.com": { "url": "https://mirror.example.org/github" }
+    "github.com": { "url": "https://mirror.example.org/github" },
+    "gitlab.com": { "user": "oauth2", "token": "glpat-..." }
   }
 }
 ```
 
 The file is optional. `url` points a host somewhere other than `https://<host>`, such as a
-mirror, and a repository is fetched from `<url>/<owner>/<repo>`. Barn runs `git`, so private
-repositories work with whatever access `git` already has.
+mirror, and a repository is fetched from `<url>/<owner>/<repo>`. `token` is sent to that
+host, and only to it, as HTTP basic authentication with `user`, `x-access-token` when it is
+not given. Barn hands it to `git` through `GIT_CONFIG_COUNT` and `GIT_CONFIG_KEY_<n>`, so it
+never appears on a command line. Without a token, private repositories work with whatever
+access `git` already has.
 
-## What changed
-
-What Barn did before this design, and what it does now:
-
-| Before | Now |
-|---|---|
-| `barn.pkg` | `barn.json` |
-| `barn.lock` | removed: versions come from `barn.json`, sums from `~/.barn/eggs` |
-| `~/.barn/repository`, `BARN_REPO`, `--repo` | `~/.barn/eggs`, moved only by `BARN_HOME` |
-| eggs named `owner/name` | dependencies named by repository, imported by `name` |
-| `0.1.0/_snapshot_<stamp>/` | `0.1.0_snapshot_<stamp>_<hash>/`, beside the release |
-| `0.1.0` falls back to the newest snapshot | `0.1.0` means the release only |
-| entry file at `src/<name>.goose` | `<source>/<name>.goose`, `source` defaulting to `.` |
-| only `src/` ships | `source` minus exclusions and git-ignored files, plus `LICENSE` and `README` |
-| `hatch` writes `main.goose` | only with `--app` |
-| `barn resolve` | `barn inspect --flat` |
-| local repository only | eggs fetched from git repositories |
-| `barn lay --release` stores the folder | it tags `v<version>`, stores the tagged commit, offers to push |
-
-## Not built yet
-
-- Fetching snapshots from a repository: `0.1.0_snapshot` from the default branch, and an
-  exact `0.1.0_snapshot_<stamp>_<hash>` from its commit. Snapshots laid on this machine work.
-- A token for a host in `config.json`. Private repositories use the credentials `git` has.
-
-## Open details
-
-- Whether `config.json` holds defaults such as the owner for `barn hatch`, replacing
-  `BARN_OWNER`.
-- How a changed release that was never pushed is restored: its tag exists, so
-  `barn lay --release` refuses it, and there is no remote to fetch it from.

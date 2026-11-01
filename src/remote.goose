@@ -1,6 +1,7 @@
 import std;
 import os;
 import json;
+import base64;
 import src.version;
 import src.manifest;
 import src.project;
@@ -8,6 +9,7 @@ import src.eggs;
 import src.checksum;
 import src.files;
 import src.git;
+import src.process;
 import src.lay;
 import src.release;
 import src.package_edit;
@@ -37,6 +39,52 @@ fn host_base(host: const u8[:]) -> u8[>..], u8[>..] {
     let url, has_url = json::as_string(json::member(json::member(json::member(root, "hosts"), host), "url"));
     guard has_url else { return str("https://", host), str(""); }
     return str(url), str("");
+}
+
+fn authorization(user: const u8[:], token: const u8[:]) -> u8[>..] {
+    var encoded: u8[>..] = [];
+    base64::encode(encoded, str(user, ":", token));
+    return str("Authorization: Basic ", encoded);
+}
+
+fn given_config_count() -> i64 {
+    var text: u8[>..] = [];
+    guard env("GIT_CONFIG_COUNT", text) else { return 0; }
+    let count, ok = parse_int(trim(text));
+    return if ok && count > 0 { count } else { 0 };
+}
+
+fn pass_tokens() -> u8[>..] {
+    var text: u8[>..] = [];
+    guard read_file(config_path(), text) else { return str(""); }
+    var doc: json::Node[>..] = [];
+    var decoded: u8[>..] = [];
+    let root, error = json::parse(text, doc, decoded);
+    guard root else { return str(config_path(), ": ", error); }
+    let hosts = json::member(root, "hosts");
+    guard hosts else { return str(""); }
+    var count = given_config_count();
+    var problem: u8[>..] = [];
+    json::each(hosts) { host =>
+        let token_node = json::member(host, "token");
+        let token, has_token = json::as_string(token_node);
+        let user, has_user = json::as_string(json::member(host, "user"));
+        let url, has_url = json::as_string(json::member(host, "url"));
+        if token_node && !has_token && problem.len == 0 {
+            format(problem, config_path(), ": hosts.", host.key, ".token must be a string");
+        }
+        if has_token && problem.len == 0 {
+            let base: u8[>..] = if has_url { str(url) } else { str("https://", host.key) };
+            let scope: const u8[:] = if ends_with(base, "/") { "" } else { "/" };
+            set_env(str("GIT_CONFIG_KEY_", count), str("http.", base, scope, ".extraHeader"));
+            let name: const u8[:] = if has_user { user } else { "x-access-token" };
+            set_env(str("GIT_CONFIG_VALUE_", count), authorization(name, token));
+            count++;
+        }
+    };
+    guard problem.len == 0 else { return problem; }
+    if count > given_config_count() { set_env("GIT_CONFIG_COUNT", str(count)); }
+    return str("");
 }
 
 fn repo_url(repo: const u8[:]) -> u8[>..], u8[>..] {
@@ -80,7 +128,7 @@ fn remote_tags(eggs: const u8[:], repo: const u8[:], tags: Tag[>..]&, text: u8[>
 fn check_fetched(p: Project, repo: const u8[:], v: Version) -> u8[>..] {
     let found = p.manifest.egg;
     guard found.name == repo else { return str("the repository of ", repo, " holds ", found.name); }
-    guard found.version == v else { return str(repo, " says version ", found.version, " at the tag v", v); }
+    guard found.version == release_of(v) else { return str(repo, " says version ", found.version, " at ", v); }
     let invalid = check_layable(p);
     guard invalid.len == 0 else { return str(repo, ":", v, " is not a valid egg: ", invalid); }
     return str("");
@@ -132,25 +180,21 @@ fn stage_fetched(clone: const u8[:], stage: const u8[:], repo: const u8[:], tag:
     };
     guard error.len == 0 else { return str(repo, ":", tag.version, ": barn.json: ", error[find(error, ": ") + 2..]); }
     guard problem.len == 0 else { return problem; }
-    guard write_file(str(stage, "/", ORIGIN_FILE), origin_text(repo, release_tag(tag.version), tag.commit)) else {
+    let tag_name = if is_release(tag.version) { release_tag(tag.version) } else { str("") };
+    guard write_file(str(stage, "/", ORIGIN_FILE), origin_text(repo, tag_name, tag.commit)) else {
         return str("cannot write ", stage, "/", ORIGIN_FILE);
     }
     return str("");
 }
 
-fn fetch_tag(eggs: const u8[:], repo: const u8[:], tag: Tag) -> u8[>..] {
+fn clone_path(eggs: const u8[:], repo: const u8[:]) -> u8[>..] {
     let folder = egg_folder(eggs, repo);
-    guard make_dirs(folder) || is_dir(folder) else { return str("cannot create ", folder); }
-    let clone = str(folder, "/.fetching-", time_ns(), "-", random_seed());
+    if !is_dir(folder) { make_dirs(folder); }
+    return str(folder, "/.fetching-", time_ns(), "-", random_seed());
+}
+
+fn store_clone(eggs: const u8[:], repo: const u8[:], clone: const u8[:], tag: Tag, url: const u8[:]) -> u8[>..] {
     let stage = str(clone, "-egg");
-    let url, _ = repo_url(repo);
-    let name = release_tag(tag.version);
-    let command: const u8[:][8] = ["clone", "-q", "--depth", "1", "--branch", name[..], url[..], clone[..]];
-    var out: u8[>..] = [];
-    guard run_git(eggs, eggs, command[..], out) == 0 else {
-        delete_tree(clone);
-        return str("cannot fetch ", repo, ":", tag.version, " from ", url);
-    }
     let problem = stage_fetched(clone, stage, repo, tag);
     delete_tree(clone);
     guard problem.len == 0 else { delete_tree(stage); return problem; }
@@ -159,6 +203,19 @@ fn fetch_tag(eggs: const u8[:], repo: const u8[:], tag: Tag) -> u8[>..] {
     guard is_dir(target) else { return str("cannot move ", repo, ":", tag.version, " into ", target); }
     print("fetched ", repo, ":", tag.version, " from ", url);
     return str("");
+}
+
+fn fetch_tag(eggs: const u8[:], repo: const u8[:], tag: Tag) -> u8[>..] {
+    let clone = clone_path(eggs, repo);
+    let url, _ = repo_url(repo);
+    let name = release_tag(tag.version);
+    let command: const u8[:][8] = ["clone", "-q", "--depth", "1", "--branch", name[..], url[..], clone[..]];
+    var out: u8[>..] = [];
+    guard run_git(eggs, eggs, command[..], out) == 0 else {
+        delete_tree(clone);
+        return str("cannot fetch ", repo, ":", tag.version, " from ", url);
+    }
+    return store_clone(eggs, repo, clone, tag, url);
 }
 
 fn fetch_release(eggs: const u8[:], repo: const u8[:], v: Version) -> u8[>..] {
@@ -271,4 +328,137 @@ fn fetch_again(eggs: const u8[:], repo: const u8[:], v: Version) -> u8[>..] {
     guard moved.len == 0 else { return moved; }
     guard delete_tree(egg_dir(eggs, repo, v)) else { return str("cannot remove ", egg_dir(eggs, repo, v)); }
     return fetch_tag(eggs, repo, tags[i]);
+}
+
+struct Snapshot { version: Version, unreachable: bool = false, message: u8[>..] }
+
+fn git_line(clone: const u8[:], eggs: const u8[:], command: const u8[:][:]) -> u8[>..] {
+    var out: u8[>..] = [];
+    guard run_git(clone, eggs, command, out) == 0 else { return str(""); }
+    return str(trim(out));
+}
+
+fn version_at(clone: const u8[:], eggs: const u8[:], commit: const u8[:]) -> Version, bool {
+    let file = str(commit, ":barn.json");
+    let command: const u8[:][2] = ["show", file[..]];
+    var text: u8[>..] = [];
+    guard run_git(clone, eggs, command[..], text) == 0 else { return Version {..}, false; }
+    var doc: json::Node[>..] = [];
+    var decoded: u8[>..] = [];
+    let root, _ = json::parse(text, doc, decoded);
+    let given, has_version = json::as_string(json::member(root, "version"));
+    guard has_version else { return Version {..}, false; }
+    let v, ok = parse_version(given);
+    return v, ok && is_release(v);
+}
+
+fn commit_stamp(clone: const u8[:], eggs: const u8[:], commit: const u8[:]) -> i64 {
+    let command: const u8[:][4] = ["log", "-1", "--format=%ct", commit];
+    let seconds, ok = parse_int(git_line(clone, eggs, command[..]));
+    guard ok else { return 0; }
+    return utc_stamp(seconds * 1000000000);
+}
+
+fn newest_commit_of(clone: const u8[:], eggs: const u8[:], release: Version) -> u8[>..] {
+    let command: const u8[:][6] = ["log", "--first-parent", "--format=%H", "HEAD", "--", "barn.json"];
+    var listing: u8[>..] = [];
+    guard run_git(clone, eggs, command[..], listing) == 0 else { return str(""); }
+    let changes = split(trim(listing), '\n');
+    for change, k in changes {
+        let v, ok = version_at(clone, eggs, change);
+        if ok && v == release {
+            let newest: u8[>..] = if k == 0 { str("HEAD") } else { str(changes[k - 1], "^") };
+            let resolve_command: const u8[:][2] = ["rev-parse", newest[..]];
+            return git_line(clone, eggs, resolve_command[..]);
+        }
+    }
+    return str("");
+}
+
+fn exact_commit(clone: const u8[:], eggs: const u8[:], wanted: Version) -> u8[>..] {
+    var hash: u8[>..] = [];
+    format_hash(hash, wanted.hash);
+    let reference = str(hash, "^{commit}");
+    let command: const u8[:][4] = ["rev-parse", "--verify", "-q", reference[..]];
+    let commit = git_line(clone, eggs, command[..]);
+    guard commit.len > 0 && commit_stamp(clone, eggs, commit) == wanted.snapshot else { return str(""); }
+    let v, ok = version_at(clone, eggs, commit);
+    guard ok && v == release_of(wanted) else { return str(""); }
+    return commit;
+}
+
+fn snapshot_of(clone: const u8[:], eggs: const u8[:], release: Version, commit: const u8[:]) -> Version {
+    var snapshot = release_of(release);
+    snapshot.snapshot = commit_stamp(clone, eggs, commit);
+    let hash, _ = parse_hash(commit[..HASH_DIGITS]);
+    snapshot.hash = hash;
+    return snapshot;
+}
+
+fn fetch_snapshot(eggs: const u8[:], repo: const u8[:], wanted: Version) -> Snapshot {
+    var result = Snapshot { version: wanted, message: [] };
+    let url, failed = repo_url(repo);
+    guard failed.len == 0 else { result.message.append(failed); return result; }
+    let clone = clone_path(eggs, repo);
+    let command: const u8[:][5] = ["clone", "-q", "--no-checkout", url[..], clone[..]];
+    var out: u8[>..] = [];
+    guard run_git(eggs, eggs, command[..], out) == 0 else {
+        delete_tree(clone);
+        result.unreachable = true;
+        format(result.message, "cannot fetch the snapshots of ", repo, " from ", url);
+        return result;
+    }
+    let commit = if is_snapshot(wanted) { exact_commit(clone, eggs, wanted) }
+                 else { newest_commit_of(clone, eggs, release_of(wanted)) };
+    guard commit.len > 0 else { delete_tree(clone); return result; }
+    let snapshot = snapshot_of(clone, eggs, wanted, commit);
+    result.version = snapshot;
+    guard !is_dir(egg_dir(eggs, repo, snapshot)) else { delete_tree(clone); return result; }
+    let checkout: const u8[:][3] = ["checkout", "-q", commit[..]];
+    var ignored: u8[>..] = [];
+    guard run_git(clone, eggs, checkout[..], ignored) == 0 else {
+        delete_tree(clone);
+        format(result.message, "cannot check out ", commit, " of ", repo);
+        return result;
+    }
+    result.message.append(store_clone(eggs, repo, clone, Tag { version: snapshot, commit: commit }, url));
+    return result;
+}
+
+fn newest_laid_snapshot(eggs: const u8[:], repo: const u8[:], v: Version) -> Version {
+    var newest = release_of(v);
+    each_laid(eggs, repo) {
+        let candidate = is_snapshot(it) && release_of(it) == release_of(v) && !has_origin_record(eggs, repo, it);
+        if candidate && (!is_snapshot(newest) || is_newer(it, newest)) {
+            newest = it;
+        }
+    };
+    return newest;
+}
+
+fn chosen_version(eggs: const u8[:], repo: const u8[:], wanted: Version, remote_first: bool) -> Version, u8[>..] {
+    guard wants_newest_snapshot(wanted) else { return wanted, str(""); }
+    let laid = newest_laid_snapshot(eggs, repo, wanted);
+    guard remote_first || !is_snapshot(laid) else { return laid, str(""); }
+    guard network.fetches && !network.offline else { return concrete_version(eggs, repo, wanted), str(""); }
+    let found = fetch_snapshot(eggs, repo, wanted);
+    guard found.unreachable || found.message.len == 0 else { return wanted, str(found.message); }
+    guard is_snapshot(found.version) else {
+        let local = concrete_version(eggs, repo, wanted);
+        if found.unreachable && is_snapshot(local) {
+            write_stderr(str("warning: ", found.message, "; using ", repo, ":", local, ", which may be stale\n"));
+        } else if found.unreachable { write_stderr(str("warning: ", found.message, "\n")); }
+        return local, str("");
+    }
+    return found.version, str("");
+}
+
+fn fetch_exact_snapshot(eggs: const u8[:], repo: const u8[:], v: Version) -> u8[>..] {
+    guard network.fetches && !network.offline && is_snapshot(v) else { return str(""); }
+    let found = fetch_snapshot(eggs, repo, v);
+    guard !found.unreachable else {
+        write_stderr(str("warning: ", found.message, "\n"));
+        return str("");
+    }
+    return str(found.message);
 }

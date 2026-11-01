@@ -67,7 +67,8 @@ fn resolve<F>(dir: const u8[:], eggs: const u8[:]) -> u8[>..] {
         guard !wants_newest_snapshot(v) else { return -1; }
         let path = str(egg_dir(eggs, egg, v), "/barn.json");
         var failed = str("");
-        if !file_exists(path) { failed = fetch_release(eggs, egg, v); }
+        if !file_exists(path) && is_release(v) { failed = fetch_release(eggs, egg, v); }
+        else if !file_exists(path) { failed = fetch_exact_snapshot(eggs, egg, v); }
         else if remote_first { failed = check_with_repository(eggs, egg, v); }
         guard failed.len == 0 else { fail(failed); }
         guard file_exists(path) else { return -1; }
@@ -77,6 +78,12 @@ fn resolve<F>(dir: const u8[:], eggs: const u8[:]) -> u8[>..] {
             fail(str(path, " says it is ", found, ", not ", egg, ":", v));
         }
         return index;
+    }
+
+    fn chosen(egg: const u8[:], wanted: Version) -> Version {
+        let v, failed = chosen_version(eggs, egg, wanted, remote_first);
+        guard failed.len == 0 else { fail(failed); }
+        return v;
     }
 
     fn node(egg: const u8[:], v: Version, manifest: i64, override: i64) -> i64 {
@@ -100,7 +107,7 @@ fn resolve<F>(dir: const u8[:], eggs: const u8[:]) -> u8[>..] {
             fail(str("barn.json overrides ", o.name, ", which is the project itself"));
         }
         guard is_local(o) else {
-            override_node.insert(o.name, node(o.name, concrete_version(eggs, o.name, o.version), -1, index));
+            override_node.insert(o.name, node(o.name, chosen(o.name, o.version), -1, index));
             return;
         }
         let path = str(dir, "/", o.path, "/barn.json");
@@ -114,7 +121,7 @@ fn resolve<F>(dir: const u8[:], eggs: const u8[:]) -> u8[>..] {
     fn request(from: i64, d: Dependency) {
         var named = lookup(override_node, d.name);
         if named < 0 {
-            named = node(d.name, concrete_version(eggs, d.name, d.version), -1, -1);
+            named = node(d.name, chosen(d.name, d.version), -1, -1);
             let newest = lookup(newest_node, d.name);
             let is_newest = newest < 0 || is_newer(nodes[named].version, nodes[newest].version);
             if is_newest { newest_node.insert(d.name, named); }

@@ -1,3 +1,6 @@
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 200809L
+#endif
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -76,6 +79,15 @@ int64_t barn_make_writable(barn_bytes path) {
     return changed ? 1 : 0;
 }
 
+int64_t barn_set_env(barn_bytes name, barn_bytes value) {
+    wchar_t *wide_name = wide_text(name);
+    wchar_t *wide_value = wide_text(value);
+    BOOL set = wide_name && wide_value && SetEnvironmentVariableW(wide_name, wide_value);
+    free(wide_name);
+    free(wide_value);
+    return set ? 1 : 0;
+}
+
 int64_t barn_run_program_into(barn_bytes arguments, barn_bytes output) {
     wchar_t *line = command_line(arguments);
     wchar_t *path = wide_text(output);
@@ -147,6 +159,15 @@ int64_t barn_make_writable(barn_bytes path) {
     int changed = chmod(text, 0644) == 0;
     free(text);
     return changed;
+}
+
+int64_t barn_set_env(barn_bytes name, barn_bytes value) {
+    char *name_text = zero_terminated(name);
+    char *value_text = zero_terminated(value);
+    int set = name_text && value_text && setenv(name_text, value_text, 1) == 0;
+    free(name_text);
+    free(value_text);
+    return set;
 }
 
 int64_t barn_run_program_into(barn_bytes arguments, barn_bytes output) {

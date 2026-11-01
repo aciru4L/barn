@@ -128,7 +128,10 @@ fn install_build(p: Project, b: Build, eggs: const u8[:], force: bool) -> u8[>..
             return;
         }
         guard laid != sums else { return; }
-        guard force && has_origin_record(eggs, n.egg, n.version) else { describe_changed(n, coordinate, laid, sums); return; }
+        guard force && has_origin_record(eggs, n.egg, n.version) else {
+            describe_changed(n, coordinate, laid, sums);
+            return;
+        }
         let failed = fetch_again(eggs, n.egg, n.version);
         guard failed.len == 0 else { format(problems, "\n  ", coordinate, ": ", failed); return; }
         sums.clear();
