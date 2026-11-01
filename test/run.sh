@@ -69,8 +69,15 @@ write_pkg() {
     printf '{\n  "owner": "acme",\n  "name": "app",\n  "version": "0.1.0"%s\n}\n' "$more" > barn.json
 }
 
+commit_all() {
+    git init -q . && git add -A && git commit -q -m "release" > /dev/null 2>&1
+}
+
 scenario() {
     export BARN_HOME="$work/home" BARN_OWNER=acme
+    export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_AUTHOR_NAME="barn test" GIT_COMMITTER_NAME="barn test"
+    export GIT_AUTHOR_EMAIL=test@example.invalid GIT_COMMITTER_EMAIL=test@example.invalid
+    export GIT_AUTHOR_DATE=2026-01-01T00:00:00Z GIT_COMMITTER_DATE=2026-01-01T00:00:00Z
     enter "$work"
 
     section "hatch and lay"
@@ -79,11 +86,14 @@ scenario() {
     run barn hatch numbers
     run barn hatch Bad-Name
     enter numbers
+    commit_all
     run barn lay --release
     run barn lay --release
     sed -i 's/0.1.0/0.1.1/' barn.json
+    commit_all
     run barn lay --release
     sed -i 's/0.1.1/0.2.0/' barn.json
+    commit_all
     run barn lay --release
     run barn lay
     run barn lay
@@ -178,6 +188,7 @@ scenario() {
     run barn hatch stats
     enter stats
     run barn add acme/numbers:0.1.0
+    commit_all
     run barn lay --release
     enter ../app
     run barn add acme/stats
@@ -323,6 +334,7 @@ scenario() {
     sed -i 's/"version": "0.1.0",/"version": "0.1.0",\n  "exclude": ["notes"],/' barn.json
     printf 'namespace shapes;\nimport numbers from "acme/numbers@v0.1.0";\n' > uses.goose
     run barn lay --check
+    commit_all
     run barn lay --release
     run ls -A "$BARN_HOME/eggs/github.com/acme/shapes/0.1.0"
     run barn add acme/numbers:0.1.0
@@ -334,6 +346,7 @@ scenario() {
     printf 'namespace layered;\n' > lib/layered.goose
     printf 'license\n' > LICENSE
     printf '{"owner": "acme", "name": "layered", "version": "0.1.0", "source": "lib"}\n' > barn.json
+    commit_all
     run barn lay --release
     run ls -A "$BARN_HOME/eggs/github.com/acme/layered/0.1.0"
     rm lib/layered.goose
@@ -362,6 +375,7 @@ scenario() {
     printf 'scratch.goose\n' >> .gitignore
     printf 'fn main() {}\n' > scratch.goose
     printf 'namespace tracked;\n' > helper.goose
+    commit_all
     run barn lay --release
     run ls -A "$BARN_HOME/eggs/github.com/acme/tracked/0.1.0"
     run ls -A
@@ -371,18 +385,21 @@ scenario() {
     silently barn hatch geometry
     enter geometry
     sed -i 's/"version": "0.1.0",/"version": "0.1.0",\n  "repo": "acme\/goose-geometry",/' barn.json
+    commit_all
     run barn lay --release
     enter ..
     mkdir tools
     enter tools
     printf 'namespace tools;\n' > tools.goose
     printf '{"owner": "acme", "name": "tools", "version": "0.1.0", "repo": "gitlab.com/acme/tools"}\n' > barn.json
+    commit_all
     run barn lay --release
     enter ..
     mkdir other_geometry
     enter other_geometry
     printf 'namespace geometry;\n' > geometry.goose
     printf '{"owner": "acme", "name": "geometry", "version": "0.1.0", "repo": "acme/geometry-two"}\n' > barn.json
+    commit_all
     silently barn lay --release
     enter ..
     run ls "$BARN_HOME/eggs" "$BARN_HOME/eggs/gitlab.com/acme"
@@ -399,6 +416,32 @@ scenario() {
     run barn add acme/Geometry-two
     write_pkg '"repo": "acme/Goose Geometry"'
     run barn inspect
+    enter ..
+
+    section "git releases"
+    silently barn hatch loose
+    enter loose
+    run barn lay --release
+    commit_all
+    printf '// more\n' >> loose.goose
+    printf 'new\n' > notes.txt
+    run barn lay --release
+    git checkout -q -- loose.goose
+    rm notes.txt
+    git init -q --bare ../loose-origin.git
+    git remote add origin ../loose-origin.git
+    printf 'n\n' | run barn lay --release
+    show "$BARN_HOME/eggs/github.com/acme/loose/0.1.0/barn.origin"
+    run git tag
+    rm -rf "$BARN_HOME/eggs/github.com/acme/loose/0.1.0"
+    run barn lay --release
+    sed -i 's/0.1.0/0.2.0/' barn.json
+    commit_all
+    run barn lay --release -y
+    run git ls-remote --tags origin
+    git tag -d v0.2.0 > /dev/null
+    rm -rf "$BARN_HOME/eggs/github.com/acme/loose/0.2.0"
+    run barn lay --release
     enter ..
 
     section "releases only"

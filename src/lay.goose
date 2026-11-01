@@ -7,6 +7,7 @@ import src.eggs;
 import src.checksum;
 import src.files;
 import src.contents;
+import src.release;
 
 fn check_layable(p: Project) -> u8[>..] {
     let name = p.manifest.name;
@@ -65,6 +66,19 @@ fn lay_release(p: Project, eggs: const u8[:], stage: const u8[:], sums: const u8
     guard failed.len == 0 else { return failed; }
     print("released ", egg, "  ", sums_hash(sums));
     return str("");
+}
+
+fn release_staged(p: Project, eggs: const u8[:], stage: const u8[:], sums: const u8[:], yes: bool) -> u8[>..] {
+    guard create_tag(p, eggs, stage) else {
+        delete_tree(stage);
+        return str("cannot tag ", release_tag(p.manifest.egg.version));
+    }
+    let failed = lay_release(p, eggs, stage, sums);
+    guard failed.len == 0 else {
+        delete_tag(p, eggs);
+        return failed;
+    }
+    return push_release(p, eggs, yes);
 }
 
 fn lay_snapshot(p: Project, eggs: const u8[:], stage: const u8[:], sums: const u8[:]) -> u8[>..] {
@@ -126,21 +140,25 @@ fn check_project(p: Project) -> u8[>..] {
     return str("");
 }
 
-fn lay_project(p: Project, eggs: const u8[:], release: bool) -> u8[>..] {
+fn lay_project(p: Project, eggs: const u8[:], release: bool, yes: bool) -> u8[>..] {
     let invalid = check_egg(p);
     guard invalid.len == 0 else { return invalid; }
     let egg = p.manifest.egg;
     guard !release || !is_released(eggs, egg.name, egg.version) else { return str(egg, " is already released"); }
+    if release {
+        let refused = check_release(p, eggs);
+        guard refused.len == 0 else { return refused; }
+    }
     let folder = egg_folder(eggs, egg.name);
     guard make_dirs(folder) || is_dir(folder) else { return str("cannot create ", folder); }
     let stage = str(folder, "/.laying-", time_ns(), "-", random_seed());
     var sums: u8[>..] = [];
     guard stage_egg(p, stage, sums) else { return str("cannot copy the egg into ", stage); }
-    guard !release else { return lay_release(p, eggs, stage, sums); }
+    guard !release else { return release_staged(p, eggs, stage, sums, yes); }
     return lay_snapshot(p, eggs, stage, sums);
 }
 
-fn lay(dir: const u8[:], eggs: const u8[:], release: bool, check: bool) -> u8[>..] {
+fn lay(dir: const u8[:], eggs: const u8[:], release: bool, check: bool, yes: bool) -> u8[>..] {
     guard !check else { return with_project(dir) { return check_project(it); }; }
-    return with_project(dir) { return lay_project(it, eggs, release); };
+    return with_project(dir) { return lay_project(it, eggs, release, yes); };
 }

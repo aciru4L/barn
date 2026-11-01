@@ -37,13 +37,16 @@ barn: bad egg name 'Bad-Name': use a lowercase letter, then lowercase letters, d
 $ cd numbers
 $ barn lay --release
 released acme/numbers:0.1.0  sha256:cede036da2928182b200e575e2faddf0508910345a699618527a0a10838d49b2
+v0.1.0 stays on this machine: there is no origin to push it to
 $ barn lay --release
 barn: acme/numbers:0.1.0 is already released
 [exit 1]
 $ barn lay --release
 released acme/numbers:0.1.1  sha256:2a0c7d463bec67ae2388b9f766c4acb5e51196597cadddf1615a1fac1dd3ff78
+v0.1.1 stays on this machine: there is no origin to push it to
 $ barn lay --release
 released acme/numbers:0.2.0  sha256:8fe19135c713944886280657874cd98b24883bc24fc50a52a1ab79baac802402
+v0.2.0 stays on this machine: there is no origin to push it to
 $ barn lay
 laid acme/numbers:0.2.0_snapshot_<stamp>_8fe19135c713  sha256:8fe19135c713944886280657874cd98b24883bc24fc50a52a1ab79baac802402
 $ barn lay
@@ -291,6 +294,7 @@ installed 1 egg, test/main_test.goose updated
 added acme/numbers:0.1.0
 $ barn lay --release
 released acme/stats:0.1.0  sha256:6ca3d46489592d3d77dd015c26edc2a318c0634a15c11dcf9683a2b46ef206f4
+v0.1.0 stays on this machine: there is no origin to push it to
 $ cd ../app
 $ barn add acme/stats
 installed 2 eggs, main.goose updated, test/main_test.goose updated
@@ -582,9 +586,9 @@ options:
   --owner NAME      the owner of a new egg (default: $BARN_OWNER)
   --app             hatch: an app, with main.goose
   --here            hatch: in the current folder
-  -y, --yes         hatch: do not ask
+  -y, --yes         hatch, lay --release: do not ask
   --force           install, add, remove, upgrade: replace edited or changed eggs
-  --release         lay: a release instead of a snapshot
+  --release         lay: tag the commit as a release, then offer to push the tag
   --check           lay: only check the egg and list what it would hold
   --flat            inspect: list the eggs instead of the tree
   -- ...            build: goose's options; run, test: the program's arguments
@@ -614,11 +618,13 @@ barn: install takes at most one folder
 Run 'barn help' for usage.
 [exit 2]
 $ barn help lay
-usage: barn lay [dir] [--release | --check]
+usage: barn lay [dir] [--release [-y] | --check]
 
-Puts the egg into ~/.barn/eggs: a new snapshot, or with
---release the release. --check runs the same checks and lists
-the files the egg would hold, without laying it.
+Puts the egg into ~/.barn/eggs as a new snapshot. With --release,
+in a git repository with nothing left to commit, it tags the commit
+v<version>, stores that release and asks before pushing the tag to
+origin. --check runs the same checks and lists the files the egg
+would hold, without laying it.
 $ barn help run
 usage: barn run [dir] [-- program arguments...]
 
@@ -662,10 +668,12 @@ acme/shapes:0.1.0 can be laid:
 $ barn lay --release
 warning: uses.goose:2 says where numbers comes from; versions belong in barn.json
 released acme/shapes:0.1.0  sha256:123810e15194bb1c617e32c2137c3a6a5b696a0c933e0f22b3e00d0201113078
+v0.1.0 stays on this machine: there is no origin to push it to
 $ ls -A <work>/home/eggs/github.com/acme/shapes/0.1.0
 LICENSE
 README.md
 barn.json
+barn.origin
 barn.sha256
 extra.goose
 shapes.goose
@@ -688,9 +696,11 @@ $ cd ..
 $ cd layered
 $ barn lay --release
 released acme/layered:0.1.0  sha256:bdca4ffaf9e5957e78f9fab8e9c2b0bb24724b2b34ee4572527d754970ca9ca2
+v0.1.0 stays on this machine: there is no origin to push it to
 $ ls -A <work>/home/eggs/github.com/acme/layered/0.1.0
 LICENSE
 barn.json
+barn.origin
 barn.sha256
 layered.goose
 $ barn lay
@@ -721,8 +731,10 @@ $ barn hatch tracked
 $ cd tracked
 $ barn lay --release
 released acme/tracked:0.1.0  sha256:9565fa17f898f056e30fd7a801f518ee35262fe198687a55d9a8f36783622e78
+v0.1.0 stays on this machine: there is no origin to push it to
 $ ls -A <work>/home/eggs/github.com/acme/tracked/0.1.0
 barn.json
+barn.origin
 barn.sha256
 helper.goose
 tracked.goose
@@ -741,10 +753,12 @@ $ barn hatch geometry
 $ cd geometry
 $ barn lay --release
 released acme/goose-geometry:0.1.0  sha256:4dcbe08a15d4c82e709aa266bbb75296b9c9bf6c0873d4023e66a7c40ae07d00
+v0.1.0 stays on this machine: there is no origin to push it to
 $ cd ..
 $ cd tools
 $ barn lay --release
 released gitlab.com/acme/tools:0.1.0  sha256:528ac2c604b46eaedb5c6fdde1a3aac5fac20309da8a4ca3c6b0d1daf3ee69d4
+v0.1.0 stays on this machine: there is no origin to push it to
 $ cd ..
 $ cd other_geometry
 $ barn lay --release
@@ -806,6 +820,41 @@ barn: bad repository name in 'acme/Geometry-two': use lowercase letters, digits,
 [exit 1]
 $ barn inspect
 barn: ./barn.json: line 5: bad repository name in 'acme/Goose Geometry': use lowercase letters, digits, -, _ and .
+[exit 1]
+$ cd ..
+
+## git releases
+$ barn hatch loose
+$ cd loose
+$ barn lay --release
+barn: barn lay --release needs a git repository: a release is a git tag
+[exit 1]
+$ barn lay --release
+barn: commit or remove these first, since a release is the tagged commit:
+   M loose.goose
+  ?? notes.txt
+[exit 1]
+$ barn lay --release
+released acme/loose:0.1.0  sha256:ec6f963732148ac031f279528ab6d70f26f91d962eedbb93648174de882c2bcb
+Push v0.1.0 to origin? [y/N] v0.1.0 stays on this machine; git push origin v0.1.0 publishes it
+--- <work>/home/eggs/github.com/acme/loose/0.1.0/barn.origin
+{
+  "repo": "acme/loose",
+  "tag": "v0.1.0",
+  "commit": "fd0d871a5b1429c4135a937946d79d3c30e7dfa2"
+}
+$ git tag
+v0.1.0
+$ barn lay --release
+barn: the tag v0.1.0 already exists
+[exit 1]
+$ barn lay --release -y
+released acme/loose:0.2.0  sha256:d6bd9fcec83b599be2175885cc730b30e23f09262ff9973ed778a1c3c950fc56
+pushed v0.2.0 to origin
+$ git ls-remote --tags origin
+4829e8212666eec8a45945b0958234fbf1ad4e1b	refs/tags/v0.2.0
+$ barn lay --release
+barn: origin already has the tag v0.2.0
 [exit 1]
 $ cd ..
 

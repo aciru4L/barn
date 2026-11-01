@@ -4,7 +4,7 @@ import src.manifest;
 import src.project;
 import src.checksum;
 import src.files;
-import src.process;
+import src.git;
 
 let LEFT_OUT_FOLDERS: const u8[:][5] = ["test", "tests", "examples", "bench", "docs"];
 let ALWAYS_SHIPPED: const u8[:][2] = ["LICENSE", "README"];
@@ -48,7 +48,7 @@ fn is_excluded(p: Project, path: const u8[:]) -> bool {
 fn is_shipped(p: Project, path: const u8[:]) -> bool {
     guard !(source_of(p.manifest) == "." && find(path, "/") < 0 && is_always_shipped(path)) else { return true; }
     guard !contains(LEFT_OUT_FOLDERS[..], first_segment(path)) else { return false; }
-    guard path != "barn.json" && path != SUM_FILE && path != RECORD_FILE else { return false; }
+    guard path != "barn.json" && path != SUM_FILE && path != RECORD_FILE && path != ORIGIN_FILE else { return false; }
     guard path != inside_source(p, main_file(p)) && path != inside_source(p, test_file(p)) else { return false; }
     return !is_excluded(p, path);
 }
@@ -71,14 +71,8 @@ fn has_left_out_part(path: const u8[:]) -> bool {
 }
 
 fn git_listing(p: Project, listing: u8[>..]&) -> bool {
-    let output = str(p.dir, "/.barn-files-", time_ns(), "-", random_seed());
-    let source = source_dir(p);
-    let arguments: (const u8[:])[>..] = ["git", "-C", source, "ls-files", "--cached", "--others", "--exclude-standard",
-                                         "-z"];
-    let status = run_program_into(arguments[..], output);
-    let read = read_file(output, listing);
-    delete_file(output);
-    return status == 0 && read;
+    let command: const u8[:][5] = ["ls-files", "--cached", "--others", "--exclude-standard", "-z"];
+    return run_git(source_dir(p), p.dir, command[..], listing) == 0;
 }
 
 fn each_listed_file<F>(p: Project, listing: const u8[:]) {

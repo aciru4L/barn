@@ -5,11 +5,12 @@ import src.files;
 
 let SUM_FILE = "barn.sha256";
 let RECORD_FILE = "barn.egg";
+let ORIGIN_FILE = "barn.origin";
 let HASH_PREFIX = "sha256:";
 
 fn file_sums(dir: const u8[:], out: u8[>..]&) -> bool {
     return walk(dir, false) { path, is_folder =>
-        if !is_folder && path != SUM_FILE && path != RECORD_FILE {
+        if !is_folder && path != SUM_FILE && path != RECORD_FILE && path != ORIGIN_FILE {
             var data: u8[>..] = [];
             read_file(str(dir, "/", path), data);
             var digest = sha256();
