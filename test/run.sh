@@ -526,6 +526,30 @@ scenario() {
     run barn verify
     write_pkg '"dependencies": {"acme/goose-twolib": "1.0.0"}'
     run barn install
+    enter ../fetched
+    printf '// more work\n' >> fetched.goose
+    commit_all
+    branch="$(git -C ../remotes/acme/fetched symbolic-ref HEAD)"
+    git push -q origin "HEAD:$branch"
+    first_hash="$(git rev-parse HEAD~2 | cut -c1-12)"
+    enter ../consumer
+    write_pkg '"dependencies": {"acme/fetched": "0.2.0_snapshot"}'
+    run barn install
+    run barn install
+    write_pkg '"dependencies": {"acme/fetched": "0.1.0_snapshot"}'
+    run barn install
+    rm -rf "$BARN_HOME"/eggs/github.com/acme/fetched/0.1.0_snapshot_*
+    write_pkg "\"dependencies\": {\"acme/fetched\": \"0.1.0_snapshot_20260101T000000Z_$first_hash\"}"
+    run barn install
+    run barn verify
+    write_pkg '"dependencies": {"acme/fetched": "0.1.0_snapshot_20260101T000000Z_000000000000"}'
+    run barn install
+    mv ../remotes/acme/fetched ../remotes/acme/fetched-away
+    write_pkg '"dependencies": {"acme/fetched": "0.2.0_snapshot"}'
+    run barn install
+    mv ../remotes/acme/fetched-away ../remotes/acme/fetched
+    write_pkg '"dependencies": {"acme/missing": "0.1.0_snapshot"}'
+    run barn install
     enter ..
     export BARN_HOME="$work/home"
 

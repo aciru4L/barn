@@ -999,6 +999,38 @@ verified 1 egg
 $ barn install
 barn: acme/goose-twolib:1.0.0 has no barn.json, and no single <name>.goose at its top declares namespace <name>;: it needs a barn.json
 [exit 1]
+$ cd ../fetched
+$ cd ../consumer
+$ barn install
+fetched acme/fetched:0.2.0_snapshot_<stamp>_00ab3e4bc01c from <work>/remotes/acme/fetched
+installed 1 egg, main.goose updated
+  acme/fetched:0.2.0_snapshot_<stamp>_00ab3e4bc01c
+$ barn install
+installed 1 egg
+  acme/fetched:0.2.0_snapshot_<stamp>_00ab3e4bc01c
+$ barn install
+fetched acme/fetched:0.1.0_snapshot_<stamp>_484f36cdb938 from <work>/remotes/acme/fetched
+installed 1 egg
+  acme/fetched:0.1.0_snapshot_<stamp>_484f36cdb938
+$ barn install
+fetched acme/fetched:0.1.0_snapshot_<stamp>_484f36cdb938 from <work>/remotes/acme/fetched
+installed 1 egg
+  acme/fetched:0.1.0_snapshot_<stamp>_484f36cdb938
+$ barn verify
+verified 1 egg
+$ barn install
+barn: cannot resolve acme/app:
+  acme/fetched:0.1.0_snapshot_<stamp>_000000000000 not found (wanted by the project)
+[exit 1]
+$ barn install
+warning: cannot fetch the snapshots of acme/fetched from <work>/remotes/acme/fetched; using acme/fetched:0.2.0_snapshot_<stamp>_00ab3e4bc01c, which may be stale
+installed 1 egg
+  acme/fetched:0.2.0_snapshot_<stamp>_00ab3e4bc01c
+$ barn install
+warning: cannot fetch the snapshots of acme/missing from <work>/remotes/acme/missing
+barn: cannot resolve acme/app:
+  no snapshot of acme/missing:0.1.0 (wanted by the project)
+[exit 1]
 $ cd ..
 
 ## releases only

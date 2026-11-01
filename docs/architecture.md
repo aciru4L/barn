@@ -302,8 +302,6 @@ What Barn did before this design, and what it does now:
 
 ## Not built yet
 
-- Fetching snapshots from a repository: `0.1.0_snapshot` from the default branch, and an
-  exact `0.1.0_snapshot_<stamp>_<hash>` from its commit. Snapshots laid on this machine work.
 - A token for a host in `config.json`. Private repositories use the credentials `git` has.
 
 ## Open details

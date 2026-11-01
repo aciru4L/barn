@@ -96,9 +96,6 @@ default branch whose `barn.json` says `0.4.0`, so work in progress can be tried 
 is released. Projects that need it fixed write the exact snapshot,
 `0.4.0_snapshot_<stamp>_<hash>`, as `barn inspect` shows it.
 
-Fetching snapshots from a repository is not built yet: today a project finds only the
-snapshots laid on its own machine.
-
 `barn lay` without `--release` makes a snapshot on your own machine only, in the same
 shape: stamped when laid, with a hash of the egg's content. It needs no commit, and in a
 git repository it leaves out the files git ignores, so it holds what your next commit

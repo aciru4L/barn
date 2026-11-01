@@ -22,8 +22,7 @@ A package manager for [Goose](https://github.com/aardappel/goose). Packages are
 | ✅ | Local eggs folder with immutable releases and snapshots named by time and content |
 | ✅ | Dependency tree and flat listing with `barn inspect` and `barn inspect --flat` |
 | ✅ | Prebuilt executables for Linux, macOS and Windows |
-| ✅ | Publishing eggs as git tags, and fetching releases from their git repository |
-| ❌ | Fetching snapshots straight from commits |
+| ✅ | Publishing eggs as git tags, and fetching releases and snapshots from their git repository |
 | ❌ | Searching and browsing available eggs |
 | ❌ | Signed releases and yanking bad versions |
 | ❌ | A stable `barn.json` format |
@@ -164,6 +163,13 @@ A release already in `~/.barn/eggs` is used without asking the repository. With
 Barn asks the repository first and refuses the release if its tag has moved. `--offline`
 uses `~/.barn/eggs` only.
 
+A snapshot that is not in `~/.barn/eggs` is fetched from a commit. `0.1.0_snapshot` is the
+newest commit on the default branch whose `barn.json` says `0.1.0`, and
+`0.1.0_snapshot_<stamp>_<hash>` is the commit with that hash, as long as its commit time is
+the stamp and its `barn.json` says `0.1.0`. A snapshot laid on this machine comes before the
+repository's for `0.1.0_snapshot`, unless local priority is off. When the repository cannot
+be reached, the newest snapshot already here is used, with a warning that it may be stale.
+
 A release changed in `~/.barn/eggs` is an error; `barn install --force` fetches it again
 from its repository, as long as its tag still points at the commit in `barn.origin`.
 
@@ -188,7 +194,8 @@ Barn keeps its eggs in `~/.barn/eggs`, or in `eggs/` under `BARN_HOME` when that
 `install`, `add`, `remove`, `upgrade` and `lay` create the folder when it is missing; the
 other commands only read it. A release lives in `github.com/acme/numbers/0.1.0/`, host
 first, and each snapshot beside it in `0.1.0_snapshot_<stamp>_<hash>/`: the UTC time it was
-laid and the first 12 hex digits of its content hash. Laying unchanged content again reports the
+laid and the first 12 hex digits of its content hash, or for a fetched snapshot its commit
+time and the first 12 hex digits of the commit hash. Laying unchanged content again reports the
 snapshot it already is.
 
 In `barn.json`, `0.1.0` means that release and nothing else, `0.1.0_snapshot` the newest
