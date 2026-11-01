@@ -68,6 +68,14 @@ int64_t barn_run_program(barn_bytes arguments) {
     return run_with(line, &startup);
 }
 
+int64_t barn_make_writable(barn_bytes path) {
+    wchar_t *wide = wide_text(path);
+    if (!wide) return 0;
+    BOOL changed = SetFileAttributesW(wide, FILE_ATTRIBUTE_NORMAL);
+    free(wide);
+    return changed ? 1 : 0;
+}
+
 int64_t barn_run_program_into(barn_bytes arguments, barn_bytes output) {
     wchar_t *line = command_line(arguments);
     wchar_t *path = wide_text(output);
@@ -96,6 +104,7 @@ int64_t barn_run_program_into(barn_bytes arguments, barn_bytes output) {
 #else
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <spawn.h>
 #include <sys/wait.h>
 
@@ -131,6 +140,14 @@ static int64_t spawn_and_wait(barn_bytes arguments, const posix_spawn_file_actio
 }
 
 int64_t barn_run_program(barn_bytes arguments) { return spawn_and_wait(arguments, NULL); }
+
+int64_t barn_make_writable(barn_bytes path) {
+    char *text = zero_terminated(path);
+    if (!text) return 0;
+    int changed = chmod(text, 0644) == 0;
+    free(text);
+    return changed;
+}
 
 int64_t barn_run_program_into(barn_bytes arguments, barn_bytes output) {
     char *path = zero_terminated(output);

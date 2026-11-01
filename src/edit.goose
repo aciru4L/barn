@@ -4,6 +4,7 @@ import src.version;
 import src.manifest;
 import src.project;
 import src.eggs;
+import src.remote;
 import src.package_edit;
 import src.install;
 import src.copies;
@@ -62,7 +63,10 @@ fn add(dir: const u8[:], eggs: const u8[:], specs: const u8[:][:], force: bool) 
             guard ok else { return str("bad version in '", spec, "'"); }
             v = parsed;
         } else {
-            let found, released = newest_release(eggs, egg);
+            var releases: Version[>..] = [];
+            let failed = known_releases(eggs, egg, releases);
+            guard failed.len == 0 else { return failed; }
+            let found, released = newest_known(releases[..], Version {..}, false);
             guard released else { return missing_release(eggs, egg); }
             v = found;
         }
@@ -134,12 +138,15 @@ fn upgrade_project(p: Project, eggs: const u8[:], specs: const u8[:][:], updated
     for d, i in p.dependencies {
         var kept = d;
         if wanted[i] {
-            let compatible_release, has_compatible = newest_compatible_release(eggs, d.name, d.version);
+            var releases: Version[>..] = [];
+            let failed = known_releases(eggs, d.name, releases);
+            guard failed.len == 0 else { return failed; }
+            let compatible_release, has_compatible = newest_known(releases[..], d.version, true);
             if has_compatible && is_newer(compatible_release, d.version) {
                 format(done, "\n", d.name, ": ", d.version, " -> ", compatible_release);
                 kept.version = compatible_release;
             }
-            let newest, has_newest = newest_release(eggs, d.name);
+            let newest, has_newest = newest_known(releases[..], d.version, false);
             if has_newest && !compatible(newest, d.version) && is_newer(newest, d.version) {
                 format(available, "\n", d.name, ":", newest, " available (incompatible)");
             }

@@ -4,6 +4,7 @@ import dictionary;
 import src.version;
 import src.manifest;
 import src.eggs;
+import src.remote;
 
 struct Node {
     egg: const u8[:], name: const u8[:], version: Version, manifest: i64, source: const u8[:], override: i64 = -1,
@@ -49,6 +50,7 @@ fn resolve<F>(dir: const u8[:], eggs: const u8[:]) -> u8[>..] {
     var node_of_key = dictionary<const u8[:], i64> {};
     var newest_node = dictionary<const u8[:], i64> {};
     var override_node = dictionary<const u8[:], i64> {};
+    var remote_first = false;
 
     fn fail(message: const u8[:]) { return str(message) from resolve; }
 
@@ -64,6 +66,10 @@ fn resolve<F>(dir: const u8[:], eggs: const u8[:]) -> u8[>..] {
     fn load_egg(egg: const u8[:], v: Version) -> i64 {
         guard !wants_newest_snapshot(v) else { return -1; }
         let path = str(egg_dir(eggs, egg, v), "/barn.json");
+        var failed = str("");
+        if !file_exists(path) { failed = fetch_release(eggs, egg, v); }
+        else if remote_first { failed = check_with_repository(eggs, egg, v); }
+        guard failed.len == 0 else { fail(failed); }
         guard file_exists(path) else { return -1; }
         let index = load_file(path);
         let found = manifests[index].egg;
@@ -141,6 +147,7 @@ fn resolve<F>(dir: const u8[:], eggs: const u8[:]) -> u8[>..] {
 
     let root = load_file(str(dir, "/barn.json"));
     let project = manifests[root];
+    remote_first = asks_repository_first(project);
     node(project.egg.name, project.egg.version, root, -1);
     for i in project.first_override..overrides_end(project) { add_override(project, i); }
     walk_graph(project);

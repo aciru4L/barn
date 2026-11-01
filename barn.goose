@@ -9,6 +9,7 @@ import src.install;
 import src.edit;
 import src.build;
 import src.files;
+import src.remote;
 
 let VERSION = "0.1.0";
 
@@ -42,6 +43,8 @@ fn help() {
           --release         lay: tag the commit as a release, then offer to push the tag
           --check           lay: only check the egg and list what it would hold
           --flat            inspect: list the eggs instead of the tree
+          --offline         install, add, remove, upgrade: use ~/.barn/eggs only
+          --set KEY=VALUE   install, add, remove, upgrade: override local_priority in barn.json
           -- ...            build: goose's options; run, test: the program's arguments
           -h, --help        help for the command
 
@@ -197,10 +200,16 @@ fn run(command: const u8[:], argv: u8[:][:]) -> u8[>..] {
         else if a == "--release" { flags.release = true; }
         else if a == "--check" { flags.check = true; }
         else if a == "--flat" { flags.flat = true; }
-        else if a == "--owner" {
+        else if a == "--offline" { network.offline = true; }
+        else if a == "--owner" || a == "--set" {
             guard i < argv.len else { fail_usage(str(a, " needs a value")); }
-            owner.clear();
-            owner.append(argv[i]);
+            if a == "--set" {
+                let refused = apply_setting(argv[i]);
+                guard refused.len == 0 else { fail_usage(refused); }
+            } else {
+                owner.clear();
+                owner.append(argv[i]);
+            }
             i++;
         } else {
             guard !starts_with(a, "-") else { fail_usage(str("unknown option '", a, "' for ", command)); }
@@ -213,6 +222,8 @@ fn run(command: const u8[:], argv: u8[:][:]) -> u8[>..] {
     check_argument_count(command, arguments.len);
     var eggs: u8[>..] = [];
     guard barn_home(eggs) else { return str("no home folder: set BARN_HOME"); }
+    network.home.append(eggs);
+    network.fetches = moves_eggs(command) && command != "lay";
     eggs.append("/eggs");
     let creates_eggs = moves_eggs(command) && !flags.check;
     guard !creates_eggs || is_dir(eggs) || make_dirs(eggs) else { return str("cannot create ", eggs); }

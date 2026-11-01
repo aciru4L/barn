@@ -79,6 +79,9 @@ scenario() {
     export GIT_AUTHOR_EMAIL=test@example.invalid GIT_COMMITTER_EMAIL=test@example.invalid
     export GIT_AUTHOR_DATE=2026-01-01T00:00:00Z GIT_COMMITTER_DATE=2026-01-01T00:00:00Z
     enter "$work"
+    mkdir -p home remotes
+    printf '{"hosts": {"github.com": {"url": "%s/remotes"}, "gitlab.com": {"url": "%s/remotes"}}}\n' \
+        "$work_native" "$work_native" > home/config.json
 
     section "hatch and lay"
     run barn hatch numbers
@@ -443,6 +446,84 @@ scenario() {
     rm -rf "$BARN_HOME/eggs/github.com/acme/loose/0.2.0"
     run barn lay --release
     enter ..
+
+    section "fetching"
+    mkdir -p remotes/acme
+    git init -q --bare remotes/acme/fetched
+    silently barn hatch fetched
+    enter fetched
+    commit_all
+    git remote add origin ../remotes/acme/fetched
+    silently barn lay --release -y
+    enter ..
+    export BARN_HOME="$work/elsewhere"
+    mkdir elsewhere
+    printf '{"hosts": {"github.com": {"url": "%s/remotes"}}}\n' "$work_native" > elsewhere/config.json
+    mkdir consumer
+    enter consumer
+    printf 'fn main() {}\n' > main.goose
+    write_pkg '"dependencies": {"acme/fetched": "0.1.0"}'
+    run barn inspect
+    run barn install
+    run ls -A "$BARN_HOME/eggs/github.com/acme/fetched"
+    run ls -A "$BARN_HOME/eggs/github.com/acme/fetched/0.1.0"
+    show "$BARN_HOME/eggs/github.com/acme/fetched/0.1.0/barn.origin"
+    run barn install
+    run barn verify
+    enter ../fetched
+    sed -i 's/0.1.0/0.2.0/' barn.json
+    commit_all
+    BARN_HOME="$work/home" silently barn lay --release -y
+    enter ../consumer
+    run barn upgrade
+    run barn add acme/fetched
+    git -C ../remotes/acme/fetched tag -f v0.1.0 v0.2.0 > /dev/null
+    run barn upgrade
+    run barn install
+    first_commit="$(git -C ../fetched rev-parse HEAD~1)"
+    git -C ../remotes/acme/fetched tag -f v0.1.0 "$first_commit" > /dev/null
+    run barn install --set local_priority=false
+    git -C ../remotes/acme/fetched tag -f v0.2.0 "$first_commit" > /dev/null
+    run barn install
+    run barn install --set local_priority=false
+    run barn install --offline --set local_priority=false
+    write_pkg $'"local_priority": false,\n  "dependencies": {"acme/fetched": "0.2.0"}'
+    run barn install
+    run barn install --set local_priority=true
+    run barn add acme/fetched --offline
+    show barn.json
+    run barn install --set colour=red
+    write_pkg '"dependencies": {"acme/fetched": "0.9.0"}'
+    run barn install
+    write_pkg '"dependencies": {"acme/missing": "0.1.0"}'
+    run barn install
+    enter ..
+    for library in goose-plainlib goose-twolib; do
+        mkdir "$library"
+        git init -q --bare "remotes/acme/$library"
+    done
+    enter goose-plainlib
+    printf 'namespace plainlib;\nfn honk() -> const u8[:] { return "honk from plainlib"; }\n' > plainlib.goose
+    printf 'namespace plainlib;\n' > helper.goose
+    commit_all
+    git tag v1.0.0
+    git push -q ../remotes/acme/goose-plainlib v1.0.0
+    enter ../goose-twolib
+    printf 'namespace first;\n' > first.goose
+    printf 'namespace second;\n' > second.goose
+    commit_all
+    git tag v1.0.0
+    git push -q ../remotes/acme/goose-twolib v1.0.0
+    enter ../consumer
+    printf 'fn main() { print(plainlib::honk()); }\n' > main.goose
+    write_pkg '"dependencies": {"acme/goose-plainlib": "1.0.0"}'
+    run barn install
+    show "$BARN_HOME/eggs/github.com/acme/goose-plainlib/1.0.0/barn.json" main.goose
+    without_goose_progress barn run
+    write_pkg '"dependencies": {"acme/goose-twolib": "1.0.0"}'
+    run barn install
+    enter ..
+    export BARN_HOME="$work/home"
 
     section "releases only"
     silently barn hatch draft

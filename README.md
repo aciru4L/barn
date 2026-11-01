@@ -22,9 +22,8 @@ A package manager for [Goose](https://github.com/aardappel/goose). Packages are
 | ✅ | Local eggs folder with immutable releases and snapshots named by time and content |
 | ✅ | Dependency tree and flat listing with `barn inspect` and `barn inspect --flat` |
 | ✅ | Prebuilt executables for Linux, macOS and Windows |
-| ❌ | Remote / hosted registry |
-| ❌ | Publishing and sharing eggs with others |
-| ❌ | Dependencies fetched straight from Git or a URL |
+| ✅ | Publishing eggs as git tags, and fetching releases from their git repository |
+| ❌ | Fetching snapshots straight from commits |
 | ❌ | Searching and browsing available eggs |
 | ❌ | Signed releases and yanking bad versions |
 | ❌ | A stable `barn.json` format |
@@ -70,8 +69,9 @@ A project describes itself and its dependencies in `barn.json`:
 ```
 
 `barn.json` is strict JSON, with no comments or trailing commas. Besides `owner`, `name`,
-`version` and `dependencies`, it may set `main` and `test`, and `overrides`, which maps an
-egg to the version to use instead, or to a local folder starting with `./` or `../`.
+`version` and `dependencies`, it may set `repo`, `main`, `test`, `source`, `exclude`,
+`local_priority` and `overrides`, which maps an egg to the version to use instead, or to a
+local folder starting with `./` or `../`.
 `add`, `remove` and `upgrade` rewrite the file in this layout.
 
 An egg is named by its repository: `acme/numbers` on GitHub, or `gitlab.com/acme/tools`
@@ -144,6 +144,40 @@ release in `~/.barn/eggs` with a `barn.origin` file naming the repository, tag a
 and then asks before running `git push origin v<version>`; `-y` answers yes. Answering no,
 or having no `origin`, keeps the release on this machine, and pushing the tag later
 publishes the same files. A plain `barn lay` needs no git and no commit.
+
+## Fetching
+
+`install`, `add`, `remove` and `upgrade` fetch a release that is not in `~/.barn/eggs` from
+its git repository: `git ls-remote --tags` finds the tag `v<version>`, and a shallow clone
+of it is checked as `barn lay --check` would check it, then stored with a `barn.origin`
+file naming the repository, tag and commit. `verify`, `build`, `run`, `test` and `inspect`
+never use the network. Barn runs `git`, so private repositories work with whatever access
+`git` already has.
+
+`add` without a version and `upgrade` look at the tags on the repository as well as the
+releases in `~/.barn/eggs`. A repository that cannot be reached is a warning, and the
+releases already here are used. Releases never change: when a tag Barn has fetched now
+points at another commit than the one in `barn.origin`, Barn refuses it.
+
+A release already in `~/.barn/eggs` is used without asking the repository. With
+`"local_priority": false` in `barn.json`, or `--set local_priority=false` for one command,
+Barn asks the repository first and refuses the release if its tag has moved. `--offline`
+uses `~/.barn/eggs` only.
+
+A repository without `barn.json` is a plain Goose library. Barn installs it as an egg with no
+dependencies, taking as its entry the one `<name>.goose` at the top that declares
+`namespace <name>;`, and writes a `barn.json` for it with that name and the tag's version.
+
+A repository is fetched from `https://<host>/<owner>/<repo>`. `~/.barn/config.json` can
+point a host elsewhere, such as a mirror:
+
+```json
+{
+  "hosts": {
+    "github.com": { "url": "https://mirror.example.org/github" }
+  }
+}
+```
 
 ## The eggs folder
 

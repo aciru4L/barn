@@ -57,6 +57,7 @@ fn package_text(m: Manifest, dependencies: const Dependency[:], overrides: const
     if m.main.len > 0 { format_field(out, "main", m.main); }
     if m.test.len > 0 { format_field(out, "test", m.test); }
     if m.source.len > 0 { format_field(out, "source", m.source); }
+    if m.remote_first { out.append("  \"local_priority\": false,\n"); }
     format_excludes(out, excludes);
     format_dependencies(out, dependencies);
     format_overrides(out, overrides);

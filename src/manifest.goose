@@ -149,7 +149,7 @@ fn is_local(o: Override) -> bool { o.path.len > 0 }
 
 struct Manifest {
     egg: Dependency, owner: const u8[:], name: const u8[:], repo: const u8[:], main: const u8[:], test: const u8[:],
-    source: const u8[:], first_dependency: i64,
+    source: const u8[:], remote_first: bool, first_dependency: i64,
     dependency_count: i64, first_override: i64, override_count: i64, first_exclude: i64, exclude_count: i64,
 }
 
@@ -310,6 +310,12 @@ fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: O
             m.main = read_root_file(k);
         } else if k == "test" {
             m.test = read_root_file(k);
+        } else if k == "local_priority" {
+            check_json();
+            let c = json::peek(r);
+            guard c == 't' || c == 'f' else { fail("local_priority must be true or false"); }
+            m.remote_first = !json::read_bool(r);
+            check_json();
         } else if k == "source" {
             take_source();
         } else if k == "exclude" {
