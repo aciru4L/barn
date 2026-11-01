@@ -24,7 +24,7 @@ fn test_file(p: Project) -> const u8[:] {
 
 fn find_dependency(p: Project, egg: const u8[:]) -> i64 {
     for d, i in p.dependencies {
-        if d.name == egg || short_name(d.name) == egg { return i; }
+        if d.name == without_github(egg) || repo_name(d.name) == egg { return i; }
     }
     return -1;
 }

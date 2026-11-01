@@ -4,6 +4,8 @@ import src.version;
 
 let OWNER_RULE = "lowercase letters, digits, - and _";
 let NAME_RULE = "a lowercase letter, then lowercase letters, digits and _";
+let REPO_RULE = "lowercase letters, digits, -, _ and .";
+let GITHUB = "github.com/";
 
 fn valid_owner(s: const u8[:]) -> bool {
     guard s.len > 0 && s.len <= 64 && s[0] != '-' && s[0] != '_' else { return false; }
@@ -21,12 +23,55 @@ fn valid_name(s: const u8[:]) -> bool {
     return true;
 }
 
-fn valid_egg(egg: const u8[:]) -> bool {
-    let slash = find(egg, "/");
-    return slash > 0 && valid_owner(egg[..slash]) && valid_name(egg[slash + 1..]);
+fn valid_repo_part(s: const u8[:]) -> bool {
+    guard s.len > 0 && s.len <= 100 && s[0] != '.' && s[0] != '-' else { return false; }
+    for c in s {
+        let allowed = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.';
+        guard allowed else { return false; }
+    }
+    return true;
 }
 
-fn short_name(egg: const u8[:]) -> const u8[:] { egg[find(egg, "/") + 1..] }
+fn valid_host(s: const u8[:]) -> bool { find(s, ".") > 0 && valid_repo_part(s) }
+
+fn last_slash(s: const u8[:]) -> i64 {
+    var i = s.len - 1;
+    while i >= 0 && s[i] != '/' { i--; }
+    return i;
+}
+
+fn repo_name(repo: const u8[:]) -> const u8[:] { repo[last_slash(repo) + 1..] }
+
+fn has_host(repo: const u8[:]) -> bool {
+    let slash = find(repo, "/");
+    return slash > 0 && find(repo[..slash], ".") >= 0;
+}
+
+fn without_github(repo: const u8[:]) -> const u8[:] {
+    if starts_with(repo, GITHUB) { return repo[GITHUB.len..]; }
+    return repo;
+}
+
+fn repo_hint(name: const u8[:]) -> u8[>..] {
+    var lower = str(name);
+    to_lower(lower);
+    guard lower != name && valid_repo_part(lower) else { return str(""); }
+    return str("; say '", lower, "'");
+}
+
+fn repo_problem(repo: const u8[:]) -> u8[>..] {
+    let parts = split(repo, '/');
+    guard parts.len == 2 || parts.len == 3 else {
+        return str("bad repository '", repo, "': expected owner/repo or host/owner/repo");
+    }
+    guard parts.len == 2 || valid_host(parts[0]) else { return str("bad host in '", repo, "'"); }
+    guard valid_owner(parts[parts.len - 2]) else { return str("bad owner in '", repo, "': use ", OWNER_RULE); }
+    let name = parts[parts.len - 1];
+    guard valid_repo_part(name) else {
+        return str("bad repository name in '", repo, "': use ", REPO_RULE, repo_hint(name));
+    }
+    return str("");
+}
 
 var warned_owner_text: u8[>..] = [];
 var warned_owners: (const u8[:])[>..] = [];
@@ -58,6 +103,13 @@ fn lowercase_spec_owner(spec: const u8[:], out: u8[>..]&) -> const u8[:] {
     let slash = find(spec, "/");
     guard slash >= 0 else { return spec; }
     return lowercase_owner(spec, slash, out);
+}
+
+fn normal_repo(s: const u8[:], out: u8[>..]&) -> const u8[:] {
+    let given = without_github(s);
+    let slash = last_slash(given);
+    guard slash > 0 else { return given; }
+    return lowercase_owner(given, slash, out);
 }
 
 fn name_suggestion(name: const u8[:]) -> u8[>..] {
@@ -96,7 +148,8 @@ struct Override { name: const u8[:], version: Version, path: const u8[:] }
 fn is_local(o: Override) -> bool { o.path.len > 0 }
 
 struct Manifest {
-    egg: Dependency, main: const u8[:], test: const u8[:], source: const u8[:], first_dependency: i64,
+    egg: Dependency, owner: const u8[:], name: const u8[:], repo: const u8[:], main: const u8[:], test: const u8[:],
+    source: const u8[:], first_dependency: i64,
     dependency_count: i64, first_override: i64, override_count: i64, first_exclude: i64, exclude_count: i64,
 }
 
@@ -193,14 +246,11 @@ fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: O
         return v;
     }
 
-    fn egg_name(s: const u8[:]) -> const u8[:] {
-        let slash = find(s, "/");
-        guard slash >= 0 else { fail(str("bad egg '", s, "': expected owner/name")); }
-        let egg = lowercase_owner(s, slash, names);
-        guard valid_owner(egg[..slash]) else { fail(str("bad owner in '", s, "': use ", OWNER_RULE)); }
-        let name = s[slash + 1..];
-        guard valid_name(name) else { fail(str("bad name in '", s, "': use ", NAME_RULE, name_hint(name))); }
-        return egg;
+    fn repo_key(s: const u8[:]) -> const u8[:] {
+        let repo = normal_repo(s, names);
+        let problem = repo_problem(repo);
+        guard problem.len == 0 else { fail(problem); }
+        return repo;
     }
 
     fn read_root_file(k: const u8[:]) -> const u8[:] {
@@ -211,7 +261,7 @@ fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: O
 
     fn take_dependencies() {
         read_object("dependencies") { key =>
-            let name = egg_name(key);
+            let name = repo_key(key);
             let d = Dependency { name: name, version: read_version(read_text(str("the version of ", name))) };
             for i in m.first_dependency..dependencies.len {
                 guard dependencies[i].name != d.name else { fail(str(d.name, " is in dependencies twice")); }
@@ -232,7 +282,7 @@ fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: O
 
     fn take_overrides() {
         read_object("overrides") { key =>
-            let name = egg_name(key);
+            let name = repo_key(key);
             let o = parse_override(name, read_text(str("the override of ", name)));
             for i in m.first_override..overrides.len {
                 guard overrides[i].name != o.name else { fail(str(o.name, " is in overrides twice")); }
@@ -250,6 +300,8 @@ fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: O
         } else if k == "name" {
             given_name = read_text(k);
             guard valid_name(given_name) else { fail(str("bad name: use ", NAME_RULE)); }
+        } else if k == "repo" {
+            m.repo = repo_key(read_text(k));
         } else if k == "version" {
             m.egg.version = read_version(read_text(k));
             has_version = true;
@@ -281,10 +333,11 @@ fn parse_manifest(src: const u8[:], dependencies: Dependency[>..]&, overrides: O
     guard given_owner.len > 0 else { return Manifest {..}, str("missing \"owner\""); }
     guard given_name.len > 0 else { return Manifest {..}, str("missing \"name\""); }
     guard has_version else { return Manifest {..}, str("missing \"version\""); }
-    let owner = lowercase_owner(given_owner, given_owner.len, names);
+    m.owner = lowercase_owner(given_owner, given_owner.len, names);
+    m.name = given_name;
     let start = names.len;
-    format(names, owner, "/", given_name);
-    m.egg.name = names[start..];
+    format(names, m.owner, "/", given_name);
+    m.egg.name = if m.repo.len > 0 { m.repo } else { names[start..] };
     m.dependency_count = dependencies.len - m.first_dependency;
     m.override_count = overrides.len - m.first_override;
     m.exclude_count = excludes.len - m.first_exclude;

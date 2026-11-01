@@ -54,7 +54,7 @@ fn accepts(b: Build, node: i64, record: Record) -> bool {
 
 fn check_copy(b: Build, node: i64, dir: const u8[:], eggs: const u8[:], check: CopyCheck&) {
     let n = b.nodes[node];
-    let name = short_name(n.egg);
+    let name = n.name;
     let label = str(".barn/", name);
     let copy = copy_path(dir, name);
     check.count++;

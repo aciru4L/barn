@@ -87,7 +87,7 @@ scenario() {
     run barn lay --release
     run barn lay
     run barn lay
-    run ls "$BARN_HOME/eggs/acme/numbers"
+    run ls "$BARN_HOME/eggs/github.com/acme/numbers"
     enter ..
 
     section "add and upgrade"
@@ -161,9 +161,9 @@ scenario() {
     run barn verify
 
     section "eggs folder changed"
-    printf '// changed\n' >> "$BARN_HOME/eggs/acme/numbers/0.2.0/numbers.goose"
+    printf '// changed\n' >> "$BARN_HOME/eggs/github.com/acme/numbers/0.2.0/numbers.goose"
     run barn install
-    (cd "$BARN_HOME/eggs/acme/numbers/0.2.0" && sha256sum barn.json numbers.goose | sed 's/ [*]/  /' > barn.sha256)
+    (cd "$BARN_HOME/eggs/github.com/acme/numbers/0.2.0" && sha256sum barn.json numbers.goose | sed 's/ [*]/  /' > barn.sha256)
     run barn install
     run barn install --force
     run barn verify
@@ -324,7 +324,7 @@ scenario() {
     printf 'namespace shapes;\nimport numbers from "acme/numbers@v0.1.0";\n' > uses.goose
     run barn lay --check
     run barn lay --release
-    run ls -A "$BARN_HOME/eggs/acme/shapes/0.1.0"
+    run ls -A "$BARN_HOME/eggs/github.com/acme/shapes/0.1.0"
     run barn add acme/numbers:0.1.0
     show barn.json
     enter ..
@@ -335,7 +335,7 @@ scenario() {
     printf 'license\n' > LICENSE
     printf '{"owner": "acme", "name": "layered", "version": "0.1.0", "source": "lib"}\n' > barn.json
     run barn lay --release
-    run ls -A "$BARN_HOME/eggs/acme/layered/0.1.0"
+    run ls -A "$BARN_HOME/eggs/github.com/acme/layered/0.1.0"
     rm lib/layered.goose
     run barn lay
     printf 'namespace other;\n' > lib/layered.goose
@@ -363,8 +363,42 @@ scenario() {
     printf 'fn main() {}\n' > scratch.goose
     printf 'namespace tracked;\n' > helper.goose
     run barn lay --release
-    run ls -A "$BARN_HOME/eggs/acme/tracked/0.1.0"
+    run ls -A "$BARN_HOME/eggs/github.com/acme/tracked/0.1.0"
     run ls -A
+    enter ..
+
+    section "repositories"
+    silently barn hatch geometry
+    enter geometry
+    sed -i 's/"version": "0.1.0",/"version": "0.1.0",\n  "repo": "acme\/goose-geometry",/' barn.json
+    run barn lay --release
+    enter ..
+    mkdir tools
+    enter tools
+    printf 'namespace tools;\n' > tools.goose
+    printf '{"owner": "acme", "name": "tools", "version": "0.1.0", "repo": "gitlab.com/acme/tools"}\n' > barn.json
+    run barn lay --release
+    enter ..
+    mkdir other_geometry
+    enter other_geometry
+    printf 'namespace geometry;\n' > geometry.goose
+    printf '{"owner": "acme", "name": "geometry", "version": "0.1.0", "repo": "acme/geometry-two"}\n' > barn.json
+    silently barn lay --release
+    enter ..
+    run ls "$BARN_HOME/eggs" "$BARN_HOME/eggs/gitlab.com/acme"
+    mkdir repos
+    enter repos
+    printf 'fn main() {}\n' > main.goose
+    write_pkg ''
+    run barn add acme/goose-geometry gitlab.com/acme/tools github.com/acme/numbers:0.1.0
+    show barn.json main.goose
+    run barn inspect
+    run ls .barn
+    run barn add acme/geometry-two
+    run barn remove goose-geometry tools
+    run barn add acme/Geometry-two
+    write_pkg '"repo": "acme/Goose Geometry"'
+    run barn inspect
     enter ..
 
     section "releases only"

@@ -34,6 +34,9 @@ All notable changes to Barn are recorded here. The format follows
   git repository so do the files git ignores.
 - `barn hatch` makes an egg with `<name>.goose` at the top; `barn hatch --app` adds
   `main.goose`.
+- Eggs named by their repository, `acme/numbers` or `gitlab.com/acme/tools`, and imported
+  under the `name` in their `barn.json`; `"repo"` says where a project lives when that
+  differs from `<owner>/<name>`. The eggs folder keeps them under their host.
 - `barn lay --check`, which checks the egg and lists its files without laying it, and a
   warning when a file in the egg names where a dependency comes from.
 
