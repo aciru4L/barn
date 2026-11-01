@@ -550,6 +550,17 @@ scenario() {
     mv ../remotes/acme/fetched-away ../remotes/acme/fetched
     write_pkg '"dependencies": {"acme/missing": "0.1.0_snapshot"}'
     run barn install
+    cp "$BARN_HOME/config.json" config.saved
+    printf '{"hosts": {"github.com": {"url": "%s/remotes", "user": "acme", "token": "secret"}}}\n' \
+        "$work_native" > "$BARN_HOME/config.json"
+    rm -rf "$BARN_HOME"/eggs/github.com/acme/fetched/0.2.0_snapshot_*
+    write_pkg '"dependencies": {"acme/fetched": "0.2.0_snapshot"}'
+    run barn install
+    printf '{"hosts": {"github.com": {"url": "%s/remotes", "token": 5}}}\n' "$work_native" > "$BARN_HOME/config.json"
+    run barn install
+    run barn install --offline
+    run barn verify
+    mv config.saved "$BARN_HOME/config.json"
     enter ..
     export BARN_HOME="$work/home"
 

@@ -1,8 +1,8 @@
 # Barn architecture
 
 > [!NOTE]
-> This is Barn's design, and Barn implements it except for what [Not built yet](#not-built-yet)
-> lists. [README.md](../README.md) describes the commands as they work today.
+> This is Barn's design, and Barn implements it; [Open details](#open-details) lists what is
+> still undecided. [README.md](../README.md) describes the commands as they work today.
 
 ## Barn and Goose
 
@@ -258,7 +258,7 @@ folder, and uses git, when there is a repository, only to leave out ignored file
 
 ## Fetching
 
-Barn runs `git`, which also handles credentials for private repositories:
+Barn runs `git`, with a token from [config.json](#configjson) or the credentials `git` has:
 
 - `git ls-remote --tags` lists the releases and the commit each tag points at.
 - A shallow clone at the tag fetches a release's files, before Barn applies `source` and
@@ -275,14 +275,18 @@ Barn runs `git`, which also handles credentials for private repositories:
 ```json
 {
   "hosts": {
-    "github.com": { "url": "https://mirror.example.org/github" }
+    "github.com": { "url": "https://mirror.example.org/github" },
+    "gitlab.com": { "user": "oauth2", "token": "glpat-..." }
   }
 }
 ```
 
 The file is optional. `url` points a host somewhere other than `https://<host>`, such as a
-mirror, and a repository is fetched from `<url>/<owner>/<repo>`. Barn runs `git`, so private
-repositories work with whatever access `git` already has.
+mirror, and a repository is fetched from `<url>/<owner>/<repo>`. `token` is sent to that
+host, and only to it, as HTTP basic authentication with `user`, `x-access-token` when it is
+not given. Barn hands it to `git` through `GIT_CONFIG_COUNT` and `GIT_CONFIG_KEY_<n>`, so it
+never appears on a command line. Without a token, private repositories work with whatever
+access `git` already has.
 
 ## What changed
 
@@ -302,10 +306,6 @@ What Barn did before this design, and what it does now:
 | `barn resolve` | `barn inspect --flat` |
 | local repository only | eggs fetched from git repositories |
 | `barn lay --release` stores the folder | it tags `v<version>`, stores the tagged commit, offers to push |
-
-## Not built yet
-
-- A token for a host in `config.json`. Private repositories use the credentials `git` has.
 
 ## Open details
 

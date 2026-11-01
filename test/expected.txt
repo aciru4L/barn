@@ -1031,6 +1031,18 @@ warning: cannot fetch the snapshots of acme/missing from <work>/remotes/acme/mis
 barn: cannot resolve acme/app:
   no snapshot of acme/missing:0.1.0 (wanted by the project)
 [exit 1]
+$ barn install
+fetched acme/fetched:0.2.0_snapshot_<stamp>_00ab3e4bc01c from <work>/remotes/acme/fetched
+installed 1 egg
+  acme/fetched:0.2.0_snapshot_<stamp>_00ab3e4bc01c
+$ barn install
+barn: <work>/elsewhere/config.json: hosts.github.com.token must be a string
+[exit 1]
+$ barn install --offline
+installed 1 egg
+  acme/fetched:0.2.0_snapshot_<stamp>_00ab3e4bc01c
+$ barn verify
+verified 1 egg
 $ cd ..
 
 ## releases only

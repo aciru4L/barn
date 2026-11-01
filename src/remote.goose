@@ -1,6 +1,7 @@
 import std;
 import os;
 import json;
+import base64;
 import src.version;
 import src.manifest;
 import src.project;
@@ -8,6 +9,7 @@ import src.eggs;
 import src.checksum;
 import src.files;
 import src.git;
+import src.process;
 import src.lay;
 import src.release;
 import src.package_edit;
@@ -37,6 +39,52 @@ fn host_base(host: const u8[:]) -> u8[>..], u8[>..] {
     let url, has_url = json::as_string(json::member(json::member(json::member(root, "hosts"), host), "url"));
     guard has_url else { return str("https://", host), str(""); }
     return str(url), str("");
+}
+
+fn authorization(user: const u8[:], token: const u8[:]) -> u8[>..] {
+    var encoded: u8[>..] = [];
+    base64::encode(encoded, str(user, ":", token));
+    return str("Authorization: Basic ", encoded);
+}
+
+fn given_config_count() -> i64 {
+    var text: u8[>..] = [];
+    guard env("GIT_CONFIG_COUNT", text) else { return 0; }
+    let count, ok = parse_int(trim(text));
+    return if ok && count > 0 { count } else { 0 };
+}
+
+fn pass_tokens() -> u8[>..] {
+    var text: u8[>..] = [];
+    guard read_file(config_path(), text) else { return str(""); }
+    var doc: json::Node[>..] = [];
+    var decoded: u8[>..] = [];
+    let root, error = json::parse(text, doc, decoded);
+    guard root else { return str(config_path(), ": ", error); }
+    let hosts = json::member(root, "hosts");
+    guard hosts else { return str(""); }
+    var count = given_config_count();
+    var problem: u8[>..] = [];
+    json::each(hosts) { host =>
+        let token_node = json::member(host, "token");
+        let token, has_token = json::as_string(token_node);
+        let user, has_user = json::as_string(json::member(host, "user"));
+        let url, has_url = json::as_string(json::member(host, "url"));
+        if token_node && !has_token && problem.len == 0 {
+            format(problem, config_path(), ": hosts.", host.key, ".token must be a string");
+        }
+        if has_token && problem.len == 0 {
+            let base: u8[>..] = if has_url { str(url) } else { str("https://", host.key) };
+            let scope: const u8[:] = if ends_with(base, "/") { "" } else { "/" };
+            set_env(str("GIT_CONFIG_KEY_", count), str("http.", base, scope, ".extraHeader"));
+            let name: const u8[:] = if has_user { user } else { "x-access-token" };
+            set_env(str("GIT_CONFIG_VALUE_", count), authorization(name, token));
+            count++;
+        }
+    };
+    guard problem.len == 0 else { return problem; }
+    if count > given_config_count() { set_env("GIT_CONFIG_COUNT", str(count)); }
+    return str("");
 }
 
 fn repo_url(repo: const u8[:]) -> u8[>..], u8[>..] {

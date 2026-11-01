@@ -50,6 +50,9 @@ All notable changes to Barn are recorded here. The format follows
   `0.1.0_snapshot_<stamp>_<hash>` the commit it names. Snapshots laid on this machine come
   first unless local priority is off, and an unreachable repository falls back to the
   snapshots already here with a warning.
+- A `token` for each host in `~/.barn/config.json`, with an optional `user`, sent to that
+  host only as HTTP basic authentication. Barn passes it to `git` in the environment rather
+  than on the command line.
 - Plain Goose libraries without `barn.json` install as eggs with no dependencies, named
   after the one `<name>.goose` at their top that declares `namespace <name>;`.
 - Eggs named by their repository, `acme/numbers` or `gitlab.com/acme/tools`, and imported

@@ -151,7 +151,7 @@ its git repository: `git ls-remote --tags` finds the tag `v<version>`, and a sha
 of it is checked as `barn lay --check` would check it, then stored with a `barn.origin`
 file naming the repository, tag and commit. `verify`, `build`, `run`, `test` and `inspect`
 never use the network. Barn runs `git`, so private repositories work with whatever access
-`git` already has.
+`git` already has, or with a token in `~/.barn/config.json`.
 
 `add` without a version and `upgrade` look at the tags on the repository as well as the
 releases in `~/.barn/eggs`. A repository that cannot be reached is a warning, and the
@@ -178,15 +178,20 @@ dependencies, taking as its entry the one `<name>.goose` at the top that declare
 `namespace <name>;`, and writes a `barn.json` for it with that name and the tag's version.
 
 A repository is fetched from `https://<host>/<owner>/<repo>`. `~/.barn/config.json` can
-point a host elsewhere, such as a mirror:
+point a host elsewhere, such as a mirror, and give it a token for private repositories:
 
 ```json
 {
   "hosts": {
-    "github.com": { "url": "https://mirror.example.org/github" }
+    "github.com": { "url": "https://mirror.example.org/github" },
+    "gitlab.com": { "user": "oauth2", "token": "glpat-..." }
   }
 }
 ```
+
+The token goes to that host only, as HTTP basic authentication with `user`, which is
+`x-access-token` when it is not given, as GitHub expects. Barn passes it to `git` in the
+environment, never on the command line.
 
 ## The eggs folder
 
