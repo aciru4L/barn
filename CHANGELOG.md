@@ -42,6 +42,9 @@ All notable changes to Barn are recorded here. The format follows
 - `add` and `upgrade` find releases on the repository too, and refuse a tag that has moved
   since it was fetched.
 - `"local_priority": false`, `--set local_priority=...` for one command, and `--offline`.
+- `barn install --force` fetches a release that was changed in the eggs folder again from
+  its repository, after checking that its tag has not moved; a changed snapshot asks to be
+  deleted and laid again.
 - Plain Goose libraries without `barn.json` install as eggs with no dependencies, named
   after the one `<name>.goose` at their top that declares `namespace <name>;`.
 - Eggs named by their repository, `acme/numbers` or `gitlab.com/acme/tools`, and imported

@@ -254,3 +254,21 @@ fn apply_setting(setting: const u8[:]) -> u8[>..] {
     network.priority = if setting == "local_priority=true" { LOCAL_FIRST } else { REMOTE_FIRST };
     return str("");
 }
+
+fn has_origin_record(eggs: const u8[:], repo: const u8[:], v: Version) -> bool {
+    file_exists(str(egg_dir(eggs, repo, v), "/", ORIGIN_FILE))
+}
+
+fn fetch_again(eggs: const u8[:], repo: const u8[:], v: Version) -> u8[>..] {
+    guard network.fetches && !network.offline else { return str("cannot fetch ", repo, ":", v, " again offline"); }
+    var text: u8[>..] = [];
+    var tags: Tag[>..] = [];
+    let failed = remote_tags(eggs, repo, tags, text);
+    guard failed.len == 0 else { return failed; }
+    let i = find_tag(tags[..], v);
+    guard i >= 0 else { return str("the repository of ", repo, " no longer has v", v); }
+    let moved = moved_tag(eggs, repo, tags[i]);
+    guard moved.len == 0 else { return moved; }
+    guard delete_tree(egg_dir(eggs, repo, v)) else { return str("cannot remove ", egg_dir(eggs, repo, v)); }
+    return fetch_tag(eggs, repo, tags[i]);
+}
