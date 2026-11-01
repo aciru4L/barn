@@ -8,7 +8,8 @@ All notable changes to Barn are recorded here. The format follows
 
 ### Added
 
-- `barn hatch`, `install`, `add`, `remove`, `upgrade`, `verify`, `lay`, `inspect` and `resolve`.
+- `barn hatch`, `install`, `add`, `remove`, `upgrade`, `verify`, `lay` and `inspect`, whose
+  `--flat` lists the eggs a project uses.
 - `barn.json`, strict JSON, with dependencies and overrides, which `add`, `remove` and
   `upgrade` rewrite. There is no lock file: the versions follow from `barn.json`, and the
   SHA-256 sums of each egg live in `~/.barn/eggs`.
