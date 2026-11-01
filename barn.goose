@@ -29,8 +29,7 @@ fn help() {
           run [dir]         check the eggs, then run the project with goose
           test [dir]        check the eggs, then run the project's tests with goose
           lay [dir]         put the egg into ~/.barn/eggs
-          inspect [dir]     show the dependency tree
-          resolve [dir]     list the eggs the project uses
+          inspect [dir]     show the dependency tree, or with --flat list the eggs
           help [command]    show help
           version           show barn's version
 
@@ -42,6 +41,7 @@ fn help() {
           --force           install, add, remove, upgrade: replace edited or changed eggs
           --release         lay: a release instead of a snapshot
           --check           lay: only check the egg and list what it would hold
+          --flat            inspect: list the eggs instead of the tree
           -- ...            build: goose's options; run, test: the program's arguments
           -h, --help        help for the command
 
@@ -52,7 +52,7 @@ fn help() {
 
 struct CommandHelp { command: const u8[:], usage: const u8[:], summary: const u8[:] }
 
-let COMMAND_HELP: const CommandHelp[14] = [
+let COMMAND_HELP: const CommandHelp[13] = [
     CommandHelp { command: "hatch", usage: "barn hatch <name> [--app] [--here] [--owner NAME] [-y]", summary: """
                       Creates ./<name>, or with --here the current folder, with barn.json,
                       <name>.goose, test/main_test.goose and .gitignore, and with --app
@@ -93,9 +93,10 @@ let COMMAND_HELP: const CommandHelp[14] = [
                       --release the release. --check runs the same checks and lists
                       the files the egg would hold, without laying it.
                       """ },
-    CommandHelp { command: "inspect", usage: "barn inspect [dir]", summary: "Shows the dependency tree." },
-    CommandHelp { command: "resolve", usage: "barn resolve [dir]",
-                  summary: "Lists the eggs the project uses." },
+    CommandHelp { command: "inspect", usage: "barn inspect [dir] [--flat]", summary: """
+                      Shows the dependency tree, with the version each request gets.
+                      With --flat, lists the eggs the project uses, one per line.
+                      """ },
     CommandHelp { command: "help", usage: "barn help [command]", summary: "" },
     CommandHelp { command: "version", usage: "barn version", summary: "" },
 ];
@@ -128,10 +129,10 @@ fn barn_home(out: u8[>..]&) -> bool {
 }
 
 struct Flags { here: bool = false, yes: bool = false, force: bool = false, release: bool = false, app: bool = false,
-               check: bool = false }
+               check: bool = false, flat: bool = false }
 
-let COMMANDS: const u8[:][12] = [
-    "hatch", "install", "add", "remove", "upgrade", "verify", "build", "run", "test", "lay", "inspect", "resolve",
+let COMMANDS: const u8[:][11] = [
+    "hatch", "install", "add", "remove", "upgrade", "verify", "build", "run", "test", "lay", "inspect",
 ];
 
 fn is_edit_command(command: const u8[:]) -> bool { command == "add" || command == "remove" || command == "upgrade" }
@@ -153,9 +154,9 @@ fn run_hatch(arguments: const u8[:][:], owner: const u8[:], flags: Flags) -> u8[
     return hatch(arguments[0], flags.here, owner, flags.yes, flags.app);
 }
 
-fn run_listing(dir: const u8[:], eggs: const u8[:], inspects: bool) -> u8[>..] {
+fn run_inspect(dir: const u8[:], eggs: const u8[:], flat: bool) -> u8[>..] {
     return resolve(dir, eggs) {
-        if inspects { print_tree(it); } else { print_list(it); }
+        if flat { print_list(it); } else { print_tree(it); }
     };
 }
 
@@ -171,7 +172,7 @@ fn run_in_project(command: const u8[:], arguments: const u8[:][:], passed: const
     if command == "verify" { return verify(dir, eggs); }
     if is_goose_command(command) { return run_goose(command, dir, eggs, passed); }
     if command == "lay" { return lay(dir, eggs, flags.release, flags.check); }
-    return run_listing(dir, eggs, command == "inspect");
+    return run_inspect(dir, eggs, flags.flat);
 }
 
 fn run(command: const u8[:], argv: u8[:][:]) -> u8[>..] {
@@ -193,6 +194,7 @@ fn run(command: const u8[:], argv: u8[:][:]) -> u8[>..] {
         else if a == "--force" { flags.force = true; }
         else if a == "--release" { flags.release = true; }
         else if a == "--check" { flags.check = true; }
+        else if a == "--flat" { flags.flat = true; }
         else if a == "--owner" {
             guard i < argv.len else { fail_usage(str(a, " needs a value")); }
             owner.clear();

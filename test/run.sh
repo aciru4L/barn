@@ -100,7 +100,7 @@ scenario() {
     run barn add acme/numbers:0.2.0
     run barn add acme/numbers:0.2.0_snapshot
     run barn inspect
-    run barn resolve
+    run barn inspect --flat
     run barn add acme/numbers:0.2.0_snapshot
     run barn add acme/nothing
     run barn add nothing
@@ -232,16 +232,16 @@ scenario() {
     run barn remove ACME/stats
     show barn.json
     write_pkg '"dependencies": {"acme/numbers": "0.1.0", "Acme/numbers": "0.1.0"}'
-    run barn resolve
+    run barn inspect --flat
     write_pkg '"dependencies": {"acme/Numbers": "0.1.0"}'
-    run barn resolve
+    run barn inspect --flat
     printf '{"owner": "Acme", "name": "app", "version": "0.1.0"}\n' > barn.json
-    run barn resolve
+    run barn inspect --flat
     enter ..
 
     section "resolution"
     BARN_HOME="$fixtures" run barn inspect "$root/test/app"
-    BARN_HOME="$fixtures" run barn resolve "$root/test/app"
+    BARN_HOME="$fixtures" run barn inspect --flat "$root/test/app"
     mkdir resolution
     enter resolution
     write_pkg '"dependencies": {"example/auth": "1.0.0", "example/json": "0.6.0", "a/b": "1.0.0"}'
@@ -250,46 +250,46 @@ scenario() {
 '  "overrides": {"example/json": "0.6.0"}'
     BARN_HOME="$fixtures" run barn inspect
     write_pkg $'"dependencies": {"example/json": "0.5.0"},\n  "overrides": {"acme/net": "0.3.0"}'
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     write_pkg '"dependencies": {"acme/net": "0.3.0_snapshot"}'
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     enter ..
 
     section "barn.json errors"
     mkdir errors
     enter errors
     write_pkg '"dependencies": {}'
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     write_pkg '"dependencies": ["example/json:0.5.0"]'
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     write_pkg '"dependencies": {"example/json": 5}'
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     write_pkg '"dependencies": {"example/json": "0.4.0->0.5.0"}'
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     write_pkg '"dependencies": {"example/json": "0.4"}'
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     write_pkg '"dependencies": {"example/json": "0.5.0_snapshot_20260101T000000Z"}'
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     write_pkg '"dependencies": {"example/json": "0.5.0", "example/json": "0.5.0"}'
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     write_pkg '"dependencies": {"json": "0.5.0"}'
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     write_pkg '"overrides": {"example/json": "/elsewhere"}'
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     write_pkg '"version": "0.2.0"'
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     write_pkg '"test": "../outside.goose"'
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     write_pkg '"colour": "red"'
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     write_pkg $'"dependencies": {"example/json": "0.5.0",}'
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     write_pkg $'// a comment\n  "dependencies": {}'
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     printf '{"name": "app", "version": "0.1.0"}\n' > barn.json
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     printf '[]\n' > barn.json
-    BARN_HOME="$fixtures" run barn resolve
+    BARN_HOME="$fixtures" run barn inspect --flat
     enter ..
 
     section "usage"
@@ -302,7 +302,9 @@ scenario() {
     run barn help lay
     run barn help run
     run barn help test
+    run barn help inspect
     run barn help frob
+    run barn resolve
     run barn version
 
     section "egg contents"
@@ -388,7 +390,7 @@ scenario() {
     section "eggs folder"
     silently barn hatch plain
     export BARN_HOME="$work/other-home"
-    run barn resolve plain
+    run barn inspect --flat plain
     run barn lay --check plain
     run test -d "$BARN_HOME/eggs"
     run barn install plain

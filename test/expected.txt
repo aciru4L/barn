@@ -109,7 +109,7 @@ acme/numbers: 0.2.0 -> 0.2.0_snapshot
 $ barn inspect
 acme/app:0.1.0
 \- acme/numbers:0.2.0_snapshot -> 0.2.0_snapshot_<stamp>_8fe19135c713
-$ barn resolve
+$ barn inspect --flat
 acme/numbers:0.2.0_snapshot_<stamp>_8fe19135c713
 $ barn add acme/numbers:0.2.0_snapshot
 acme/numbers:0.2.0_snapshot unchanged
@@ -458,14 +458,14 @@ removed acme/stats:0.1.0
     "acme/numbers": "0.1.1"
   }
 }
-$ barn resolve
+$ barn inspect --flat
 warning: owner 'Acme' is not lowercase: using 'acme'
 barn: ./barn.json: line 5: acme/numbers is in dependencies twice
 [exit 1]
-$ barn resolve
+$ barn inspect --flat
 barn: ./barn.json: line 5: bad name in 'acme/Numbers': use a lowercase letter, then lowercase letters, digits and _; say 'numbers'
 [exit 1]
-$ barn resolve
+$ barn inspect --flat
 warning: owner 'Acme' is not lowercase: using 'acme'
 $ cd ..
 
@@ -478,7 +478,7 @@ acme/api:0.1.0
 |  +- acme/web:1.4.1 (*)
 |  \- example/json:0.5.0
 \- example/json:0.5.0
-$ barn resolve <root>/test/app
+$ barn inspect --flat <root>/test/app
 acme/web:1.4.1
 example/auth:1.0.0
 example/json:0.5.0
@@ -498,10 +498,10 @@ acme/app:0.1.0
 |  |  \- acme/net:0.3.2
 |  \- example/json:0.5.0 -> 0.6.0  (override)
 \- example/json:0.6.0  (override)
-$ barn resolve
+$ barn inspect --flat
 warning: unused override acme/net
 example/json:0.5.0
-$ barn resolve
+$ barn inspect --flat
 barn: cannot resolve acme/app:
   no snapshot of acme/net:0.3.0 (wanted by the project)
 [exit 1]
@@ -509,50 +509,50 @@ $ cd ..
 
 ## barn.json errors
 $ cd errors
-$ barn resolve
-$ barn resolve
+$ barn inspect --flat
+$ barn inspect --flat
 barn: ./barn.json: line 5: dependencies must be an object
 [exit 1]
-$ barn resolve
+$ barn inspect --flat
 barn: ./barn.json: line 5: the version of example/json must be a string
 [exit 1]
-$ barn resolve
+$ barn inspect --flat
 barn: ./barn.json: line 5: '0.4.0->0.5.0': ranges are not supported
 [exit 1]
-$ barn resolve
+$ barn inspect --flat
 barn: ./barn.json: line 5: bad version '0.4'
 [exit 1]
-$ barn resolve
+$ barn inspect --flat
 barn: ./barn.json: line 5: bad version '0.5.0_snapshot_<stamp>'
 [exit 1]
-$ barn resolve
+$ barn inspect --flat
 barn: ./barn.json: line 5: example/json is in dependencies twice
 [exit 1]
-$ barn resolve
+$ barn inspect --flat
 barn: ./barn.json: line 5: bad egg 'json': expected owner/name
 [exit 1]
-$ barn resolve
+$ barn inspect --flat
 barn: ./barn.json: line 5: bad override '/elsewhere': use a version, or a folder starting with ./ or ../
 [exit 1]
-$ barn resolve
+$ barn inspect --flat
 barn: ./barn.json: line 5: version is given twice
 [exit 1]
-$ barn resolve
+$ barn inspect --flat
 barn: ./barn.json: line 5: bad test '../outside.goose'
 [exit 1]
-$ barn resolve
+$ barn inspect --flat
 barn: ./barn.json: line 5: unknown key 'colour'
 [exit 1]
-$ barn resolve
+$ barn inspect --flat
 barn: ./barn.json: line 5: expected a key (barn.json is strict JSON: no comments, no trailing commas)
 [exit 1]
-$ barn resolve
+$ barn inspect --flat
 barn: ./barn.json: line 5: expected a key (barn.json is strict JSON: no comments, no trailing commas)
 [exit 1]
-$ barn resolve
+$ barn inspect --flat
 barn: ./barn.json: missing "owner"
 [exit 1]
-$ barn resolve
+$ barn inspect --flat
 barn: ./barn.json: line 1: expected a JSON object
 [exit 1]
 $ cd ..
@@ -574,8 +574,7 @@ commands:
   run [dir]         check the eggs, then run the project with goose
   test [dir]        check the eggs, then run the project's tests with goose
   lay [dir]         put the egg into ~/.barn/eggs
-  inspect [dir]     show the dependency tree
-  resolve [dir]     list the eggs the project uses
+  inspect [dir]     show the dependency tree, or with --flat list the eggs
   help [command]    show help
   version           show barn's version
 
@@ -587,6 +586,7 @@ options:
   --force           install, add, remove, upgrade: replace edited or changed eggs
   --release         lay: a release instead of a snapshot
   --check           lay: only check the egg and list what it would hold
+  --flat            inspect: list the eggs instead of the tree
   -- ...            build: goose's options; run, test: the program's arguments
   -h, --help        help for the command
 
@@ -631,8 +631,17 @@ Checks that .barn/ holds what barn.json asks for, unedited,
 then runs the project's test file (test/main_test.goose unless
 barn.json sets test) with goose run. A test fails by exiting with
 a status other than 0.
+$ barn help inspect
+usage: barn inspect [dir] [--flat]
+
+Shows the dependency tree, with the version each request gets.
+With --flat, lists the eggs the project uses, one per line.
 $ barn help frob
 barn: unknown command 'frob'
+Run 'barn help' for usage.
+[exit 2]
+$ barn resolve
+barn: unknown command 'resolve'
 Run 'barn help' for usage.
 [exit 2]
 $ barn version
@@ -759,7 +768,7 @@ $ cd ..
 
 ## eggs folder
 $ barn hatch plain
-$ barn resolve plain
+$ barn inspect --flat plain
 $ barn lay --check plain
 acme/plain:0.1.0 can be laid:
   plain.goose

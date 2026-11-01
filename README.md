@@ -20,7 +20,7 @@ A package manager for [Goose](https://github.com/aardappel/goose). Packages are
 | ✅ | `barn build`, `barn run` and `barn test` refuse out-of-date or edited eggs before handing off to Goose |
 | ✅ | Overrides: pin an egg's version, or point it at a local folder |
 | ✅ | Local eggs folder with immutable releases and snapshots named by time and content |
-| ✅ | Dependency tree and flat listing with `barn inspect` and `barn resolve` |
+| ✅ | Dependency tree and flat listing with `barn inspect` and `barn inspect --flat` |
 | ✅ | Prebuilt executables for Linux, macOS and Windows |
 | ❌ | Remote / hosted registry |
 | ❌ | Publishing and sharing eggs with others |
@@ -88,8 +88,7 @@ egg to the version to use instead, or to a local folder starting with `./` or `.
 | `barn test [-- arguments...]` | check the eggs, then `goose run` the project's tests |
 | `barn lay` | put the egg into `~/.barn/eggs` |
 | `barn lay --check` | check the egg and list the files it would hold |
-| `barn inspect` | show the dependency tree |
-| `barn resolve` | list the eggs the project uses |
+| `barn inspect [--flat]` | show the dependency tree, or list the eggs the project uses |
 
 `barn build` and `barn run` first check that each egg in `.barn/` is the version `barn.json`
 asks for and matches its sums in `~/.barn/eggs`, then hand the project's main file to `goose`
