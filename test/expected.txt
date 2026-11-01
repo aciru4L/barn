@@ -95,11 +95,13 @@ fn main() {
     }
 }
 $ barn upgrade
+warning: cannot list the tags of acme/numbers at <work>/remotes/acme/numbers; using the releases in ~/.barn/eggs
 installed 1 egg
   acme/numbers:0.1.1
 acme/numbers: 0.1.0 -> 0.1.1
 acme/numbers:0.2.0 available (incompatible)
 $ barn add acme/numbers
+warning: cannot list the tags of acme/numbers at <work>/remotes/acme/numbers; using the releases in ~/.barn/eggs
 installed 1 egg
   acme/numbers:0.2.0
 acme/numbers: 0.1.1 -> 0.2.0 (incompatible)
@@ -117,6 +119,7 @@ acme/numbers:0.2.0_snapshot_<stamp>_8fe19135c713
 $ barn add acme/numbers:0.2.0_snapshot
 acme/numbers:0.2.0_snapshot unchanged
 $ barn add acme/nothing
+warning: cannot list the tags of acme/nothing at <work>/remotes/acme/nothing; using the releases in ~/.barn/eggs
 barn: acme/nothing not found
 [exit 1]
 $ barn add nothing
@@ -297,6 +300,7 @@ released acme/stats:0.1.0  sha256:6ca3d46489592d3d77dd015c26edc2a318c0634a15c11d
 v0.1.0 stays on this machine: there is no origin to push it to
 $ cd ../app
 $ barn add acme/stats
+warning: cannot list the tags of acme/stats at <work>/remotes/acme/stats; using the releases in ~/.barn/eggs
 installed 2 eggs, main.goose updated, test/main_test.goose updated
   acme/stats:0.1.0
   acme/numbers:0.1.0
@@ -334,6 +338,7 @@ removed acme/stats:0.1.0
   }
 }
 $ barn add acme/stats acme/numbers:0.1.1
+warning: cannot list the tags of acme/stats at <work>/remotes/acme/stats; using the releases in ~/.barn/eggs
 installed 2 eggs, main.goose updated
   acme/stats:0.1.0
   acme/numbers:0.1.1
@@ -378,6 +383,7 @@ $ barn verify
 verified 0 eggs
 $ barn run
 $ barn add acme/stats
+warning: cannot list the tags of acme/stats at <work>/remotes/acme/stats; using the releases in ~/.barn/eggs
 installed 2 eggs, main.goose updated
   acme/numbers:0.2.0  (../numbers)
   acme/stats:0.1.0
@@ -428,6 +434,7 @@ $ ls .barn
 numbers
 $ barn add ACME/stats
 warning: owner 'ACME' is not lowercase: using 'acme'
+warning: cannot list the tags of acme/stats at <work>/remotes/acme/stats; using the releases in ~/.barn/eggs
 warning: owner 'Acme' is not lowercase: using 'acme'
 installed 2 eggs, main.goose updated
   acme/numbers:0.1.1
@@ -437,6 +444,7 @@ $ barn add acme/Stats
 barn: bad repository name in 'acme/Stats': use lowercase letters, digits, -, _ and .; say 'stats'
 [exit 1]
 $ barn upgrade numbers
+warning: cannot list the tags of acme/numbers at <work>/remotes/acme/numbers; using the releases in ~/.barn/eggs
 installed 2 eggs
   acme/numbers:0.1.1
   acme/stats:0.1.0
@@ -772,6 +780,8 @@ gitlab.com
 tools
 $ cd repos
 $ barn add acme/goose-geometry gitlab.com/acme/tools github.com/acme/numbers:0.1.0
+warning: cannot list the tags of acme/goose-geometry at <work>/remotes/acme/goose-geometry; using the releases in ~/.barn/eggs
+warning: cannot list the tags of gitlab.com/acme/tools at <work>/remotes/acme/tools; using the releases in ~/.barn/eggs
 installed 3 eggs, main.goose updated
   acme/goose-geometry:0.1.0
   gitlab.com/acme/tools:0.1.0
@@ -806,6 +816,7 @@ geometry
 numbers
 tools
 $ barn add acme/geometry-two
+warning: cannot list the tags of acme/geometry-two at <work>/remotes/acme/geometry-two; using the releases in ~/.barn/eggs
 barn: cannot resolve acme/app:
   acme/goose-geometry and acme/geometry-two are both imported as 'geometry'
 barn.json unchanged
@@ -890,12 +901,31 @@ installed 1 egg
   acme/fetched:0.1.0
 $ barn verify
 verified 1 egg
+$ cd ../fetched
+$ barn lay --release -y
+$ cd ../consumer
+$ barn upgrade
+up to date
+acme/fetched:0.2.0 available (incompatible)
+$ barn add acme/fetched
+fetched acme/fetched:0.2.0 from <work>/remotes/acme/fetched
+installed 1 egg
+  acme/fetched:0.2.0
+acme/fetched: 0.1.0 -> 0.2.0 (incompatible)
+$ barn upgrade
+barn: the tag v0.1.0 of acme/fetched now points at cd14b486423349617312187af8304323fb8b3296, not 484f36cdb9382ad5783a3c4bf6d071da1969bf35: a release must never change
+[exit 1]
+$ barn install
+installed 1 egg
+  acme/fetched:0.2.0
 $ barn install
 barn: cannot resolve acme/app:
   acme/fetched:0.9.0 not found (wanted by the project)
 [exit 1]
 $ barn install
-barn: cannot list the tags of acme/missing at <work>/remotes/acme/missing
+warning: cannot list the tags of acme/missing at <work>/remotes/acme/missing
+barn: cannot resolve acme/app:
+  acme/missing:0.1.0 not found (wanted by the project)
 [exit 1]
 $ cd ..
 
@@ -906,10 +936,13 @@ $ barn lay
 $ cd ..
 $ cd releases
 $ barn add acme/draft
+warning: cannot list the tags of acme/draft at <work>/remotes/acme/draft; using the releases in ~/.barn/eggs
 barn: acme/draft has no release; acme/draft:0.1.0_snapshot adds its newest snapshot
 [exit 1]
 $ barn add acme/draft:0.1.0
-barn: cannot list the tags of acme/draft at https://github.com/acme/draft
+warning: cannot list the tags of acme/draft at <work>/remotes/acme/draft
+barn: cannot resolve acme/app:
+  acme/draft:0.1.0 not found (wanted by the project)
 barn.json unchanged
 [exit 1]
 $ barn add acme/draft:0.1.0_snapshot

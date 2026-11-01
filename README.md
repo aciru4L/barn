@@ -153,6 +153,11 @@ file naming the repository, tag and commit. `verify`, `build`, `run`, `test` and
 never use the network. Barn runs `git`, so private repositories work with whatever access
 `git` already has.
 
+`add` without a version and `upgrade` look at the tags on the repository as well as the
+releases in `~/.barn/eggs`. A repository that cannot be reached is a warning, and the
+releases already here are used. Releases never change: when a tag Barn has fetched now
+points at another commit than the one in `barn.origin`, Barn refuses it.
+
 A repository is fetched from `https://<host>/<owner>/<repo>`. `~/.barn/config.json` can
 point a host elsewhere, such as a mirror:
 

@@ -79,6 +79,9 @@ scenario() {
     export GIT_AUTHOR_EMAIL=test@example.invalid GIT_COMMITTER_EMAIL=test@example.invalid
     export GIT_AUTHOR_DATE=2026-01-01T00:00:00Z GIT_COMMITTER_DATE=2026-01-01T00:00:00Z
     enter "$work"
+    mkdir -p home remotes
+    printf '{"hosts": {"github.com": {"url": "%s/remotes"}, "gitlab.com": {"url": "%s/remotes"}}}\n' \
+        "$work_native" "$work_native" > home/config.json
 
     section "hatch and lay"
     run barn hatch numbers
@@ -467,6 +470,16 @@ scenario() {
     show "$BARN_HOME/eggs/github.com/acme/fetched/0.1.0/barn.origin"
     run barn install
     run barn verify
+    enter ../fetched
+    sed -i 's/0.1.0/0.2.0/' barn.json
+    commit_all
+    BARN_HOME="$work/home" silently barn lay --release -y
+    enter ../consumer
+    run barn upgrade
+    run barn add acme/fetched
+    git -C ../remotes/acme/fetched tag -f v0.1.0 v0.2.0 > /dev/null
+    run barn upgrade
+    run barn install
     write_pkg '"dependencies": {"acme/fetched": "0.9.0"}'
     run barn install
     write_pkg '"dependencies": {"acme/missing": "0.1.0"}'

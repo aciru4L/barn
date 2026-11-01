@@ -128,8 +128,64 @@ fn fetch_release(eggs: const u8[:], repo: const u8[:], v: Version) -> u8[>..] {
     var text: u8[>..] = [];
     var tags: Tag[>..] = [];
     let failed = remote_tags(eggs, repo, tags, text);
-    guard failed.len == 0 else { return failed; }
+    guard failed.len == 0 else {
+        write_stderr(str("warning: ", failed, "\n"));
+        return str("");
+    }
     let i = find_tag(tags[..], v);
     guard i >= 0 else { return str(""); }
     return fetch_tag(eggs, repo, tags[i]);
+}
+
+fn recorded_commit(eggs: const u8[:], repo: const u8[:], v: Version) -> u8[>..] {
+    var text: u8[>..] = [];
+    guard read_file(str(egg_dir(eggs, repo, v), "/", ORIGIN_FILE), text) else { return str(""); }
+    var doc: json::Node[>..] = [];
+    var decoded: u8[>..] = [];
+    let root, _ = json::parse(text, doc, decoded);
+    let commit, _ = json::as_string(json::member(root, "commit"));
+    return str(commit);
+}
+
+fn moved_tag(eggs: const u8[:], repo: const u8[:], tag: Tag) -> u8[>..] {
+    guard is_released(eggs, repo, tag.version) else { return str(""); }
+    let recorded = recorded_commit(eggs, repo, tag.version);
+    guard recorded.len > 0 && recorded != tag.commit else { return str(""); }
+    return str("the tag v", tag.version, " of ", repo, " now points at ", tag.commit, ", not ", recorded,
+               ": a release must never change");
+}
+
+fn add_known(versions: Version[>..]&, v: Version) {
+    for known in versions { if known == v { return; } }
+    versions.push(v);
+}
+
+fn known_releases(eggs: const u8[:], repo: const u8[:], versions: Version[>..]&) -> u8[>..] {
+    each_version(eggs, repo) { if is_released(eggs, repo, it) { add_known(versions, it); } };
+    guard network.fetches && !network.offline else { return str(""); }
+    var text: u8[>..] = [];
+    var tags: Tag[>..] = [];
+    let failed = remote_tags(eggs, repo, tags, text);
+    guard failed.len == 0 else {
+        write_stderr(str("warning: ", failed, "; using the releases in ~/.barn/eggs\n"));
+        return str("");
+    }
+    for tag in tags {
+        let moved = moved_tag(eggs, repo, tag);
+        guard moved.len == 0 else { return moved; }
+        add_known(versions, tag.version);
+    }
+    return str("");
+}
+
+fn newest_known(versions: const Version[:], like: Version, compatible_only: bool) -> Version, bool {
+    var newest = Version {..};
+    var found = false;
+    for v in versions {
+        if (!compatible_only || compatible(v, like)) && (!found || is_newer(v, newest)) {
+            newest = v;
+            found = true;
+        }
+    }
+    return newest, found;
 }
