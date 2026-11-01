@@ -1,10 +1,23 @@
 # Publishing an egg
 
-> [!NOTE]
-> [architecture.md](architecture.md) describes the design behind this guide.
-
 An egg is published by tagging a release in its git repository. Anyone can then depend on
-it as `owner/repo`, or `host/owner/repo` outside GitHub.
+it as `owner/repo`, or `host/owner/repo` outside GitHub. [How Barn works](architecture.md)
+is the reference behind this guide.
+
+## Your first egg
+
+```sh
+barn hatch geometry --owner acme
+cd geometry
+git init && git add -A && git commit -m "feat: start geometry"
+git remote add origin https://github.com/acme/geometry.git
+barn lay --release
+```
+
+`barn hatch` writes `barn.json` at version `0.1.0`, `geometry.goose`, a test and a
+`.gitignore`. Once the tag is pushed, another project adds the egg with
+`barn add acme/geometry`. If the repository is named differently from the egg, say
+`acme/goose-geometry`, set `"repo": "acme/goose-geometry"` in `barn.json`.
 
 ## The rules
 
@@ -96,14 +109,35 @@ default branch whose `barn.json` says `0.4.0`, so work in progress can be tried 
 is released. Projects that need it fixed write the exact snapshot,
 `0.4.0_snapshot_<stamp>_<hash>`, as `barn inspect` shows it.
 
+Raise `version` in `barn.json` in the first commit after a release. Otherwise the commits
+after `v0.4.0` are still snapshots of `0.4.0`, and a project asking for `0.4.0_snapshot`
+gets work that is newer than the release it names.
+
 `barn lay` without `--release` makes a snapshot on your own machine only, in the same
 shape: stamped when laid, with a hash of the egg's content. It needs no commit, and in a
 git repository it leaves out the files git ignores, so it holds what your next commit
 could.
 
+## Private eggs
+
+An egg in a private repository is published the same way. Projects that use it need read
+access: either the credentials `git` already has, or a token for the host in
+`~/.barn/config.json`:
+
+```json
+{
+  "hosts": {
+    "github.com": { "token": "github_pat_..." }
+  }
+}
+```
+
+A fine-grained GitHub token needs read access to the repository's contents. On another host,
+`user` sets the name the token is sent with, such as `"user": "oauth2"` on GitLab.
+
 ## Libraries without barn.json
 
 A plain Goose library can be installed without a `barn.json`. Barn takes the `<x>.goose`
 at the root that declares `namespace <x>;` as its entry file, takes the version from the
-tag, and assumes it has no dependencies. Adding a `barn.json` makes the name explicit and lets the library declare
-dependencies.
+tag, and assumes it has no dependencies. Adding a `barn.json` makes the name explicit and
+lets the library declare dependencies.

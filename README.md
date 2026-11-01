@@ -207,6 +207,12 @@ In `barn.json`, `0.1.0` means that release and nothing else, `0.1.0_snapshot` th
 snapshot of it, and `0.1.0_snapshot_<stamp>_<hash>` that one snapshot. `barn add` without a
 version picks the newest release.
 
+## Further reading
+
+- [Publishing an egg](docs/publishing.md): releasing, snapshots, CI checks and private eggs.
+- [How Barn works](docs/architecture.md): how Barn chooses versions, stores and checks eggs,
+  and fetches them.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). `test/run.sh` runs the test suite.
