@@ -71,3 +71,14 @@ fn delete_tree(path: const u8[:]) -> bool {
     }
     return delete_dir(path);
 }
+
+fn scratch_path(folder: const u8[:], kind: const u8[:]) -> u8[>..] {
+    let digits = "0123456789abcdefghijklmnopqrstuvwxyz";
+    var n = time_ns() as u64 ^ random_seed();
+    var path = str(folder, "/.", kind, "-");
+    for _ in 8 {
+        path.push(digits[(n % 36) as i64]);
+        n /= 36;
+    }
+    return path;
+}
