@@ -2,16 +2,8 @@ import std;
 import os;
 import src.version;
 import src.manifest;
+import src.terminal;
 import src.package_edit;
-
-fn confirm(question: const u8[:]) -> bool {
-    write_stdout(str(question, " [y/N] "));
-    flush_stdout();
-    var answer: u8[>..] = [];
-    guard read_line(answer) else { print(""); return false; }
-    let a = trim(answer);
-    return a == "y" || a == "Y" || a == "yes" || a == "Yes" || a == "YES";
-}
 
 fn add_ignore_lines(path: const u8[:]) -> bool {
     let wanted: const u8[:][2] = [".barn/", "*.exe"];

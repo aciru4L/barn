@@ -45,7 +45,8 @@ export BARN_OWNER=acme
 
 barn hatch numbers               # a new egg in ./numbers
 cd numbers
-barn lay --release               # put numbers 0.1.0 into ~/.barn/eggs
+git init && git add -A && git commit -m "numbers 0.1.0"
+barn lay --release               # tag v0.1.0 and put numbers 0.1.0 into ~/.barn/eggs
 cd ..
 
 barn hatch app --app             # a program that uses it
@@ -136,6 +137,13 @@ Eggs import their dependencies by name only, as in `import numbers;`: versions b
 a file it ships, since Goose would refuse it next to the import line Barn writes.
 `barn lay --check` runs every check and lists the files the egg would hold, without laying
 it.
+
+A release is a git tag. `barn lay --release` needs a git repository with nothing left to
+commit and no tag `v<version>` yet, locally or on `origin`. It tags the commit, stores the
+release in `~/.barn/eggs` with a `barn.origin` file naming the repository, tag and commit,
+and then asks before running `git push origin v<version>`; `-y` answers yes. Answering no,
+or having no `origin`, keeps the release on this machine, and pushing the tag later
+publishes the same files. A plain `barn lay` needs no git and no commit.
 
 ## The eggs folder
 

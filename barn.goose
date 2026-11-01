@@ -37,9 +37,9 @@ fn help() {
           --owner NAME      the owner of a new egg (default: $BARN_OWNER)
           --app             hatch: an app, with main.goose
           --here            hatch: in the current folder
-          -y, --yes         hatch: do not ask
+          -y, --yes         hatch, lay --release: do not ask
           --force           install, add, remove, upgrade: replace edited or changed eggs
-          --release         lay: a release instead of a snapshot
+          --release         lay: tag the commit as a release, then offer to push the tag
           --check           lay: only check the egg and list what it would hold
           --flat            inspect: list the eggs instead of the tree
           -- ...            build: goose's options; run, test: the program's arguments
@@ -88,10 +88,12 @@ let COMMAND_HELP: const CommandHelp[13] = [
                       barn.json sets test) with goose run. A test fails by exiting with
                       a status other than 0.
                       """ },
-    CommandHelp { command: "lay", usage: "barn lay [dir] [--release | --check]", summary: """
-                      Puts the egg into ~/.barn/eggs: a new snapshot, or with
-                      --release the release. --check runs the same checks and lists
-                      the files the egg would hold, without laying it.
+    CommandHelp { command: "lay", usage: "barn lay [dir] [--release [-y] | --check]", summary: """
+                      Puts the egg into ~/.barn/eggs as a new snapshot. With --release,
+                      in a git repository with nothing left to commit, it tags the commit
+                      v<version>, stores that release and asks before pushing the tag to
+                      origin. --check runs the same checks and lists the files the egg
+                      would hold, without laying it.
                       """ },
     CommandHelp { command: "inspect", usage: "barn inspect [dir] [--flat]", summary: """
                       Shows the dependency tree, with the version each request gets.
@@ -171,7 +173,7 @@ fn run_in_project(command: const u8[:], arguments: const u8[:][:], passed: const
     if command == "install" { return install(dir, eggs, flags.force); }
     if command == "verify" { return verify(dir, eggs); }
     if is_goose_command(command) { return run_goose(command, dir, eggs, passed); }
-    if command == "lay" { return lay(dir, eggs, flags.release, flags.check); }
+    if command == "lay" { return lay(dir, eggs, flags.release, flags.check, flags.yes); }
     return run_inspect(dir, eggs, flags.flat);
 }
 
