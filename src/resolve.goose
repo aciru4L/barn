@@ -6,7 +6,7 @@ import src.manifest;
 import src.eggs;
 
 struct Node {
-    egg: const u8[:], version: Version, manifest: i64, source: const u8[:], override: i64 = -1,
+    egg: const u8[:], name: const u8[:], version: Version, manifest: i64, source: const u8[:], override: i64 = -1,
     first_request: i64 = 0, request_count: i64 = 0,
 }
 
@@ -83,7 +83,8 @@ fn resolve<F>(dir: const u8[:], eggs: const u8[:]) -> u8[>..] {
         keys.append(key);
         node_of_key.insert(keys[start..], nodes.len);
         let source = if loaded >= 0 { source_of(manifests[loaded]) } else { "." };
-        nodes.push(Node { egg: egg, version: v, manifest: loaded, source: source, override: override });
+        let name = if loaded >= 0 { manifests[loaded].name } else { repo_name(egg) };
+        nodes.push(Node { egg: egg, name: name, version: v, manifest: loaded, source: source, override: override });
         return nodes.len - 1;
     }
 
@@ -218,12 +219,12 @@ fn build_problems(b: Build, is_used: const bool[:]) -> u8[>..] {
     var node_of_name = dictionary<const u8[:], i64> {};
     for node in b.used[1..] {
         let n = b.nodes[node];
-        let clash = lookup(node_of_name, short_name(n.egg));
+        let clash = lookup(node_of_name, n.name);
         if clash >= 0 {
             format(problems, "\n  ", b.nodes[clash].egg, " and ", n.egg, " are both imported as '",
-                   short_name(n.egg), "'");
+                   n.name, "'");
         }
-        node_of_name.insert(short_name(n.egg), node);
+        node_of_name.insert(n.name, node);
         if n.manifest < 0 { describe_missing(b, node, is_used, problems); }
         else if n.override < 0 { describe_incompatible(b, node, is_used, problems); }
     }

@@ -64,7 +64,7 @@ fn import_lines(b: Build, root: const u8[:]) -> u8[>..] {
     let up = path_to_project(root);
     var lines: u8[>..] = [];
     for node in b.used[1..] {
-        let name = short_name(b.nodes[node].egg);
+        let name = b.nodes[node].name;
         let folder = local_path(b, node);
         let inner = b.nodes[node].source;
         let package: u8[>..] = if inner == "." { str(folder) } else { str(folder, "/", inner) };
@@ -156,7 +156,7 @@ fn install_build(p: Project, b: Build, eggs: const u8[:], force: bool) -> u8[>..
     fn plan_eggs() {
         for node in b.used[1..] {
             let n = b.nodes[node];
-            let name = short_name(n.egg);
+            let name = n.name;
             let coordinate = str(n.egg, ":", n.version);
             known.push(name);
             if local_path(b, node).len > 0 { format(report, "\n  ", coordinate, "  (", local_path(b, node), ")"); }
@@ -184,7 +184,7 @@ fn install_build(p: Project, b: Build, eggs: const u8[:], force: bool) -> u8[>..
         }
         for node in copies {
             let n = b.nodes[node];
-            let to = copy_path(p.dir, short_name(n.egg));
+            let to = copy_path(p.dir, n.name);
             guard delete_tree(to) && copy_tree(egg_dir(eggs, n.egg, n.version), to) &&
                   delete_tree(str(to, "/", SUM_FILE)) && write_record(to, n.egg, n.version) else {
                 return str("cannot copy into ", to) from install_build;

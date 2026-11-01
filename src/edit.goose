@@ -53,12 +53,9 @@ fn add(dir: const u8[:], eggs: const u8[:], specs: const u8[:][:], force: bool) 
     var done: u8[>..] = [];
     for spec in specs {
         let colon = find(spec, ":");
-        let egg = if colon < 0 { spec } else { spec[..colon] };
-        guard valid_egg(egg) else {
-            let slash = find(egg, "/");
-            guard slash > 0 && valid_owner(egg[..slash]) else { return str("bad egg '", spec, "'"); }
-            return str("bad name in '", spec, "': use ", NAME_RULE, name_hint(egg[slash + 1..]));
-        }
+        let egg = without_github(if colon < 0 { spec } else { spec[..colon] });
+        let problem = repo_problem(egg);
+        guard problem.len == 0 else { return problem; }
         var v = Version {..};
         if colon >= 0 {
             let parsed, ok = parse_version(spec[colon + 1..]);

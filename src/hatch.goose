@@ -77,7 +77,8 @@ fn write_project_files(target: const u8[:], owner: const u8[:], name: const u8[:
     let dependencies: Dependency[>..] = [];
     let overrides: Override[>..] = [];
     let excludes: (const u8[:])[>..] = [];
-    let pkg = package_text(Manifest { egg: Dependency { name: egg, version: first }, .. }, dependencies[..],
+    let manifest = Manifest { egg: Dependency { name: egg, version: first }, owner: owner, name: name, .. };
+    let pkg = package_text(manifest, dependencies[..],
                            overrides[..], excludes[..]);
     let entry = str("namespace ", name, ";\n\n", "fn honk() -> const u8[:] {\n", "    return \"honk from ", name,
                     "\";\n", "}\n");

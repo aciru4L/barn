@@ -17,7 +17,7 @@ fn source_dir(p: Project) -> u8[>..] {
 
 fn entry_path(p: Project) -> u8[>..] {
     let source = source_of(p.manifest);
-    let file = str(short_name(p.manifest.egg.name), ".goose");
+    let file = str(p.manifest.name, ".goose");
     if source == "." { return file; }
     return str(source, "/", file);
 }

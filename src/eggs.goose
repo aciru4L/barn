@@ -1,8 +1,14 @@
 import std;
 import os;
 import src.version;
+import src.manifest;
 
-fn egg_dir(eggs: const u8[:], egg: const u8[:], v: Version) -> u8[>..] { str(eggs, "/", egg, "/", v) }
+fn egg_folder(eggs: const u8[:], egg: const u8[:]) -> u8[>..] {
+    if has_host(egg) { return str(eggs, "/", egg); }
+    return str(eggs, "/", GITHUB, egg);
+}
+
+fn egg_dir(eggs: const u8[:], egg: const u8[:], v: Version) -> u8[>..] { str(egg_folder(eggs, egg), "/", v) }
 
 fn is_released(eggs: const u8[:], egg: const u8[:], v: Version) -> bool {
     file_exists(str(egg_dir(eggs, egg, release_of(v)), "/barn.json"))
@@ -10,7 +16,7 @@ fn is_released(eggs: const u8[:], egg: const u8[:], v: Version) -> bool {
 
 fn each_laid<F>(eggs: const u8[:], egg: const u8[:]) {
     var listing: u8[>..] = [];
-    list_dir(str(eggs, "/", egg), listing);
+    list_dir(egg_folder(eggs, egg), listing);
     each_split(listing, '\n') {
         let v, ok = parse_version(it);
         if ok && !wants_newest_snapshot(v) { F(v); }

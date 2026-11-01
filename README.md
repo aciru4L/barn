@@ -1,7 +1,7 @@
 # Barn
 
 A package manager for [Goose](https://github.com/aardappel/goose). Packages are
-**eggs**, named `owner/name` and released at semantic versions.
+**eggs**, named by the repository they live in and released at semantic versions.
 
 > [!WARNING]
 > **Work in progress.**
@@ -73,6 +73,13 @@ A project describes itself and its dependencies in `barn.json`:
 egg to the version to use instead, or to a local folder starting with `./` or `../`.
 `add`, `remove` and `upgrade` rewrite the file in this layout.
 
+An egg is named by its repository: `acme/numbers` on GitHub, or `gitlab.com/acme/tools`
+on another host, and `github.com/acme/numbers` is the same as `acme/numbers`. It is
+imported under the `name` its own `barn.json` declares, so the repository
+`acme/goose-geometry` can hold the egg `geometry`, imported as `geometry`; its `barn.json`
+says `"repo": "acme/goose-geometry"`, which defaults to `<owner>/<name>`. Two dependencies
+imported under the same name are an error.
+
 ## Commands
 
 | Command | Does |
@@ -134,9 +141,9 @@ it.
 
 Barn keeps its eggs in `~/.barn/eggs`, or in `eggs/` under `BARN_HOME` when that is set.
 `install`, `add`, `remove`, `upgrade` and `lay` create the folder when it is missing; the
-other commands only read it. A release lives in `owner/name/0.1.0/`, and each snapshot
-beside it in `owner/name/0.1.0_snapshot_<stamp>_<hash>/`: the UTC time it was laid and the
-first 12 hex digits of its content hash. Laying unchanged content again reports the
+other commands only read it. A release lives in `github.com/acme/numbers/0.1.0/`, host
+first, and each snapshot beside it in `0.1.0_snapshot_<stamp>_<hash>/`: the UTC time it was
+laid and the first 12 hex digits of its content hash. Laying unchanged content again reports the
 snapshot it already is.
 
 In `barn.json`, `0.1.0` means that release and nothing else, `0.1.0_snapshot` the newest

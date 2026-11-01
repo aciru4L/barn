@@ -9,7 +9,7 @@ import src.files;
 import src.contents;
 
 fn check_layable(p: Project) -> u8[>..] {
-    let name = short_name(p.manifest.egg.name);
+    let name = p.manifest.name;
     guard is_dir(source_dir(p)) else { return str("the source folder ", source_of(p.manifest), " does not exist"); }
     let entry_file = entry_path(p);
     var entry: u8[>..] = [];
@@ -131,7 +131,7 @@ fn lay_project(p: Project, eggs: const u8[:], release: bool) -> u8[>..] {
     guard invalid.len == 0 else { return invalid; }
     let egg = p.manifest.egg;
     guard !release || !is_released(eggs, egg.name, egg.version) else { return str(egg, " is already released"); }
-    let folder = str(eggs, "/", egg.name);
+    let folder = egg_folder(eggs, egg.name);
     guard make_dirs(folder) || is_dir(folder) else { return str("cannot create ", folder); }
     let stage = str(folder, "/.laying-", time_ns(), "-", random_seed());
     var sums: u8[>..] = [];

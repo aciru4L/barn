@@ -48,7 +48,7 @@ $ barn lay
 laid acme/numbers:0.2.0_snapshot_<stamp>_8fe19135c713  sha256:8fe19135c713944886280657874cd98b24883bc24fc50a52a1ab79baac802402
 $ barn lay
 acme/numbers:0.2.0_snapshot_<stamp>_8fe19135c713 is already laid
-$ ls <work>/home/eggs/acme/numbers
+$ ls <work>/home/eggs/github.com/acme/numbers
 0.1.0
 0.1.1
 0.2.0
@@ -117,7 +117,7 @@ $ barn add acme/nothing
 barn: acme/nothing not found
 [exit 1]
 $ barn add nothing
-barn: bad egg 'nothing'
+barn: bad repository 'nothing': expected owner/repo or host/owner/repo
 [exit 1]
 $ barn add acme/numbers:0.2.0
 installed 1 egg
@@ -430,7 +430,7 @@ installed 2 eggs, main.goose updated
   acme/stats:0.1.0
 added acme/stats:0.1.0
 $ barn add acme/Stats
-barn: bad name in 'acme/Stats': use a lowercase letter, then lowercase letters, digits and _; say 'stats'
+barn: bad repository name in 'acme/Stats': use lowercase letters, digits, -, _ and .; say 'stats'
 [exit 1]
 $ barn upgrade numbers
 installed 2 eggs
@@ -463,7 +463,7 @@ warning: owner 'Acme' is not lowercase: using 'acme'
 barn: ./barn.json: line 5: acme/numbers is in dependencies twice
 [exit 1]
 $ barn inspect --flat
-barn: ./barn.json: line 5: bad name in 'acme/Numbers': use a lowercase letter, then lowercase letters, digits and _; say 'numbers'
+barn: ./barn.json: line 5: bad repository name in 'acme/Numbers': use lowercase letters, digits, -, _ and .; say 'numbers'
 [exit 1]
 $ barn inspect --flat
 warning: owner 'Acme' is not lowercase: using 'acme'
@@ -529,7 +529,7 @@ $ barn inspect --flat
 barn: ./barn.json: line 5: example/json is in dependencies twice
 [exit 1]
 $ barn inspect --flat
-barn: ./barn.json: line 5: bad egg 'json': expected owner/name
+barn: ./barn.json: line 5: bad repository 'json': expected owner/repo or host/owner/repo
 [exit 1]
 $ barn inspect --flat
 barn: ./barn.json: line 5: bad override '/elsewhere': use a version, or a folder starting with ./ or ../
@@ -662,7 +662,7 @@ acme/shapes:0.1.0 can be laid:
 $ barn lay --release
 warning: uses.goose:2 says where numbers comes from; versions belong in barn.json
 released acme/shapes:0.1.0  sha256:123810e15194bb1c617e32c2137c3a6a5b696a0c933e0f22b3e00d0201113078
-$ ls -A <work>/home/eggs/acme/shapes/0.1.0
+$ ls -A <work>/home/eggs/github.com/acme/shapes/0.1.0
 LICENSE
 README.md
 barn.json
@@ -688,7 +688,7 @@ $ cd ..
 $ cd layered
 $ barn lay --release
 released acme/layered:0.1.0  sha256:bdca4ffaf9e5957e78f9fab8e9c2b0bb24724b2b34ee4572527d754970ca9ca2
-$ ls -A <work>/home/eggs/acme/layered/0.1.0
+$ ls -A <work>/home/eggs/github.com/acme/layered/0.1.0
 LICENSE
 barn.json
 barn.sha256
@@ -721,7 +721,7 @@ $ barn hatch tracked
 $ cd tracked
 $ barn lay --release
 released acme/tracked:0.1.0  sha256:9565fa17f898f056e30fd7a801f518ee35262fe198687a55d9a8f36783622e78
-$ ls -A <work>/home/eggs/acme/tracked/0.1.0
+$ ls -A <work>/home/eggs/github.com/acme/tracked/0.1.0
 barn.json
 barn.sha256
 helper.goose
@@ -734,6 +734,79 @@ helper.goose
 scratch.goose
 test
 tracked.goose
+$ cd ..
+
+## repositories
+$ barn hatch geometry
+$ cd geometry
+$ barn lay --release
+released acme/goose-geometry:0.1.0  sha256:4dcbe08a15d4c82e709aa266bbb75296b9c9bf6c0873d4023e66a7c40ae07d00
+$ cd ..
+$ cd tools
+$ barn lay --release
+released gitlab.com/acme/tools:0.1.0  sha256:528ac2c604b46eaedb5c6fdde1a3aac5fac20309da8a4ca3c6b0d1daf3ee69d4
+$ cd ..
+$ cd other_geometry
+$ barn lay --release
+$ cd ..
+$ ls <work>/home/eggs <work>/home/eggs/gitlab.com/acme
+<work>/home/eggs:
+github.com
+gitlab.com
+
+<work>/home/eggs/gitlab.com/acme:
+tools
+$ cd repos
+$ barn add acme/goose-geometry gitlab.com/acme/tools github.com/acme/numbers:0.1.0
+installed 3 eggs, main.goose updated
+  acme/goose-geometry:0.1.0
+  gitlab.com/acme/tools:0.1.0
+  acme/numbers:0.1.0
+added acme/goose-geometry:0.1.0
+added gitlab.com/acme/tools:0.1.0
+added acme/numbers:0.1.0
+--- barn.json
+{
+  "owner": "acme",
+  "name": "app",
+  "version": "0.1.0",
+  "dependencies": {
+    "acme/goose-geometry": "0.1.0",
+    "gitlab.com/acme/tools": "0.1.0",
+    "acme/numbers": "0.1.0"
+  }
+}
+--- main.goose
+import geometry from "./.barn/geometry";
+import tools from "./.barn/tools";
+import numbers from "./.barn/numbers";
+
+fn main() {}
+$ barn inspect
+acme/app:0.1.0
++- acme/goose-geometry:0.1.0
++- gitlab.com/acme/tools:0.1.0
+\- acme/numbers:0.1.0
+$ ls .barn
+geometry
+numbers
+tools
+$ barn add acme/geometry-two
+barn: cannot resolve acme/app:
+  acme/goose-geometry and acme/geometry-two are both imported as 'geometry'
+barn.json unchanged
+[exit 1]
+$ barn remove goose-geometry tools
+installed 1 egg, main.goose updated
+  acme/numbers:0.1.0
+removed acme/goose-geometry:0.1.0
+removed gitlab.com/acme/tools:0.1.0
+$ barn add acme/Geometry-two
+barn: bad repository name in 'acme/Geometry-two': use lowercase letters, digits, -, _ and .; say 'geometry-two'
+[exit 1]
+$ barn inspect
+barn: ./barn.json: line 5: bad repository name in 'acme/Goose Geometry': use lowercase letters, digits, -, _ and .
+[exit 1]
 $ cd ..
 
 ## releases only

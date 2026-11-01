@@ -49,11 +49,11 @@ fn format_overrides(out: u8[>..]&, overrides: const Override[:]) {
 
 fn package_text(m: Manifest, dependencies: const Dependency[:], overrides: const Override[:],
                 excludes: (const u8[:])[:]) -> u8[>..] {
-    let slash = find(m.egg.name, "/");
     var out = str("{\n");
-    format_field(out, "owner", m.egg.name[..slash]);
-    format_field(out, "name", m.egg.name[slash + 1..]);
+    format_field(out, "owner", m.owner);
+    format_field(out, "name", m.name);
     format_field(out, "version", str(m.egg.version));
+    if m.repo.len > 0 { format_field(out, "repo", m.repo); }
     if m.main.len > 0 { format_field(out, "main", m.main); }
     if m.test.len > 0 { format_field(out, "test", m.test); }
     if m.source.len > 0 { format_field(out, "source", m.source); }
