@@ -190,7 +190,7 @@ fn stage_fetched(clone: const u8[:], stage: const u8[:], repo: const u8[:], tag:
 fn clone_path(eggs: const u8[:], repo: const u8[:]) -> u8[>..] {
     let folder = egg_folder(eggs, repo);
     if !is_dir(folder) { make_dirs(folder); }
-    return str(folder, "/.fetching-", time_ns(), "-", random_seed());
+    return scratch_path(folder, "fetch");
 }
 
 fn store_clone(eggs: const u8[:], repo: const u8[:], clone: const u8[:], tag: Tag, url: const u8[:]) -> u8[>..] {

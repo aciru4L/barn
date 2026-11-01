@@ -1,10 +1,11 @@
 import std;
 import os;
 import src.process;
+import src.files;
 
 fn run_git(dir: const u8[:], scratch: const u8[:], command: const u8[:][:], out: u8[>..]&) -> i64 {
-    let output = str(scratch, "/.barn-git-", time_ns(), "-", random_seed());
-    var arguments: (const u8[:])[>..] = ["git", "-C", dir];
+    let output = scratch_path(scratch, "git");
+    var arguments: (const u8[:])[>..] = ["git", "-c", "core.longpaths=true", "-C", dir];
     for a in command { arguments.push(a); }
     let status = run_program_into(arguments[..], output);
     read_file(output, out);
