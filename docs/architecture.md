@@ -1,8 +1,8 @@
 # Barn architecture
 
 > [!NOTE]
-> This is the planned design. [README.md](../README.md) describes what Barn does today, and
-> [What changes](#what-changes) lists the differences.
+> This is Barn's design, and Barn implements it except for what [Not built yet](#not-built-yet)
+> lists. [README.md](../README.md) describes the commands as they work today.
 
 ## Barn and Goose
 
@@ -272,17 +272,20 @@ Barn runs `git`, which also handles credentials for private repositories:
 ```json
 {
   "hosts": {
-    "github.com": { "token": "..." }
+    "github.com": { "url": "https://mirror.example.org/github" }
   }
 }
 ```
 
-The file is optional. Without it, Barn uses local eggs and whatever `git` already has
-access to.
+The file is optional. `url` points a host somewhere other than `https://<host>`, such as a
+mirror, and a repository is fetched from `<url>/<owner>/<repo>`. Barn runs `git`, so private
+repositories work with whatever access `git` already has.
 
-## What changes
+## What changed
 
-| Today | Planned |
+What Barn did before this design, and what it does now:
+
+| Before | Now |
 |---|---|
 | `barn.pkg` | `barn.json` |
 | `barn.lock` | removed: versions come from `barn.json`, sums from `~/.barn/eggs` |
@@ -297,10 +300,15 @@ access to.
 | local repository only | eggs fetched from git repositories |
 | `barn lay --release` stores the folder | it tags `v<version>`, stores the tagged commit, offers to push |
 
+## Not built yet
+
+- Fetching snapshots from a repository: `0.1.0_snapshot` from the default branch, and an
+  exact `0.1.0_snapshot_<stamp>_<hash>` from its commit. Snapshots laid on this machine work.
+- A token for a host in `config.json`. Private repositories use the credentials `git` has.
+
 ## Open details
 
 - Whether `config.json` holds defaults such as the owner for `barn hatch`, replacing
   `BARN_OWNER`.
-- What happens when a local folder in `overrides` declares a different `repo`.
 - How a changed release that was never pushed is restored: its tag exists, so
   `barn lay --release` refuses it, and there is no remote to fetch it from.

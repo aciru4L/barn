@@ -520,6 +520,10 @@ scenario() {
     run barn install
     show "$BARN_HOME/eggs/github.com/acme/goose-plainlib/1.0.0/barn.json" main.goose
     without_goose_progress barn run
+    printf '// altered\n' >> "$BARN_HOME/eggs/github.com/acme/goose-plainlib/1.0.0/plainlib.goose"
+    run barn install
+    run barn install --force
+    run barn verify
     write_pkg '"dependencies": {"acme/goose-twolib": "1.0.0"}'
     run barn install
     enter ..
@@ -543,6 +547,9 @@ scenario() {
     run barn verify
     run barn install
     run barn verify
+    newest_draft="$(ls -d "$BARN_HOME"/eggs/github.com/acme/draft/0.1.0_snapshot_* | tail -1)"
+    printf '// altered\n' >> "$newest_draft/draft.goose"
+    run barn install --force
     enter ..
 
     section "eggs folder"

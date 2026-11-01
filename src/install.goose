@@ -9,6 +9,7 @@ import src.files;
 import src.checksum;
 import src.copies;
 import src.uses;
+import src.remote;
 
 fn path_to_project(main: const u8[:]) -> u8[>..] {
     var depth = 0;
@@ -113,13 +114,25 @@ fn install_build(p: Project, b: Build, eggs: const u8[:], force: bool) -> u8[>..
     installed_names(p.dir, installed, installed_text);
     for name in installed { known.push(name); }
 
-    fn check_laid(coordinate: const u8[:], from: const u8[:], sums: const u8[:]) {
+    fn describe_changed(n: Node, coordinate: const u8[:], laid: const u8[:], sums: const u8[:]) {
+        format(problems, "\n  ", coordinate, ": changed in the eggs folder since it was stored:");
+        describe_changes(laid, sums, "", problems);
+        if has_origin_record(eggs, n.egg, n.version) { overridable = true; }
+        else { format(problems, "\n  delete ", egg_dir(eggs, n.egg, n.version), " and lay it again"); }
+    }
+
+    fn check_laid(n: Node, coordinate: const u8[:], from: const u8[:], sums: u8[>..]&) {
         var laid: u8[>..] = [];
-        if !read_sums(from, laid) { format(problems, "\n  ", coordinate, ": no ", SUM_FILE, " in the eggs folder"); }
-        else if laid != sums {
-            format(problems, "\n  ", coordinate, ": changed in the eggs folder since barn lay:");
-            describe_changes(laid, sums, "", problems);
+        guard read_sums(from, laid) else {
+            format(problems, "\n  ", coordinate, ": no ", SUM_FILE, " in the eggs folder");
+            return;
         }
+        guard laid != sums else { return; }
+        guard force && has_origin_record(eggs, n.egg, n.version) else { describe_changed(n, coordinate, laid, sums); return; }
+        let failed = fetch_again(eggs, n.egg, n.version);
+        guard failed.len == 0 else { format(problems, "\n  ", coordinate, ": ", failed); return; }
+        sums.clear();
+        file_sums(from, sums);
     }
 
     fn check_edited(name: const u8[:]) {
@@ -145,7 +158,7 @@ fn install_build(p: Project, b: Build, eggs: const u8[:], force: bool) -> u8[>..
         let from = egg_dir(eggs, n.egg, n.version);
         var sums: u8[>..] = [];
         file_sums(from, sums);
-        check_laid(coordinate, from, sums);
+        check_laid(n, coordinate, from, sums);
         kept.push(name);
         format(report, "\n  ", coordinate);
         guard !is_current(name, n.egg, n.version, sums) else { return; }

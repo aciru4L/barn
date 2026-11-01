@@ -1,7 +1,7 @@
 # Publishing an egg
 
 > [!NOTE]
-> This describes the planned design in [architecture.md](architecture.md).
+> [architecture.md](architecture.md) describes the design behind this guide.
 
 An egg is published by tagging a release in its git repository. Anyone can then depend on
 it as `owner/repo`, or `host/owner/repo` outside GitHub.
@@ -95,6 +95,9 @@ time and hash. A project that asks for `0.4.0_snapshot` gets the newest commit o
 default branch whose `barn.json` says `0.4.0`, so work in progress can be tried before it
 is released. Projects that need it fixed write the exact snapshot,
 `0.4.0_snapshot_<stamp>_<hash>`, as `barn inspect` shows it.
+
+Fetching snapshots from a repository is not built yet: today a project finds only the
+snapshots laid on its own machine.
 
 `barn lay` without `--release` makes a snapshot on your own machine only, in the same
 shape: stamped when laid, with a hash of the egg's content. It needs no commit, and in a

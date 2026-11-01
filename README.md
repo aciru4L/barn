@@ -164,6 +164,9 @@ A release already in `~/.barn/eggs` is used without asking the repository. With
 Barn asks the repository first and refuses the release if its tag has moved. `--offline`
 uses `~/.barn/eggs` only.
 
+A release changed in `~/.barn/eggs` is an error; `barn install --force` fetches it again
+from its repository, as long as its tag still points at the commit in `barn.origin`.
+
 A repository without `barn.json` is a plain Goose library. Barn installs it as an egg with no
 dependencies, taking as its entry the one `<name>.goose` at the top that declares
 `namespace <name>;`, and writes a `barn.json` for it with that name and the tag's version.
