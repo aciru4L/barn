@@ -11,7 +11,7 @@ import src.build;
 import src.files;
 import src.remote;
 
-let VERSION = "0.1.0";
+let VERSION = "0.2.0";
 
 fn help() {
     print("""
