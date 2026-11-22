@@ -3,6 +3,13 @@
 A package manager for [Goose](https://github.com/aardappel/goose). Packages are
 **eggs**, named by the repository they live in and released at semantic versions.
 
+Goose's built-in `goose fetch` handles flat, pinned dependencies with no manifest
+file. Barn builds on top of that for projects that want a `barn.json` manifest,
+transitive dependency resolution via minimal version selection, SHA-256
+verification before building or running, and local overrides or snapshots while
+developing libraries. It can also install plain Goose repositories that do not
+have a `barn.json` yet.
+
 > [!WARNING]
 > **Work in progress.**
 
